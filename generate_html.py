@@ -1,50 +1,97 @@
 import pandas as pd
 from data import get_stock_data
 from indicator import add_indicators
-from ai_analysis import analyze
 from jinja2 import Template
 
-# ===== 讀取你的持股 CSV =====
+# ===== 讀CSV =====
 def load_stock_list():
-    df = pd.read_csv("stocks.csv", sep="\t")
-    # 去除欄位空白（防炸）
+    df = pd.read_csv("stocks.csv", sep="\t", encoding="utf-8-sig")
     df.columns = df.columns.str.strip()
+
     df = df.rename(columns={
         "Ticker": "stock_id",
         "Name": "name"
     })
-    print("欄位:", df.columns.tolist())  # debug
+
     return df.to_dict(orient="records")
+
+
+# ===== 簡單判斷邏輯（讓UI會動🔥）=====
+def get_signal(k, d):
+    if k > 70 and d > 70:
+        return "sell"
+    elif k < 30 and d < 30:
+        return "buy"
+    elif k > d:
+        return "hold"
+    else:
+        return "watch"
+
+
+def get_bb_position(price, upper, lower):
+    if price >= upper:
+        return "上軌挑戰"
+    elif price <= lower:
+        return "下軌測試"
+    elif price > (upper + lower) / 2:
+        return "中軌上方"
+    else:
+        return "中軌下方"
+
+
+# ===== 主流程 =====
 stock_list = load_stock_list()
 results = []
-print("股票清單:", stock_list)
 
-# ===== 主迴圈 =====
 for s in stock_list:
-    code = str(s["stock_id"])
-    name = s["name"]
-
-    print(f"處理中: {code} {name}")
-
     try:
+        code = str(s["stock_id"])
+        name = s["name"]
+
+        print(f"處理中: {code}")
+
         df = get_stock_data(code)
         df = add_indicators(df)
 
+        if df.empty:
+            continue
+
         latest = df.iloc[-1]
+
+        k = round(latest['K'], 1)
+        d = round(latest['D'], 1)
+
+        signal = get_signal(k, d)
+
+        bb = get_bb_position(
+            latest['close'],
+            latest['BB_upper'],
+            latest['BB_lower']
+        )
 
         results.append({
             "name": name,
             "code": code,
+            "sector": "electronic",  # 先固定（之後可升級）
             "price": round(latest['close'], 2),
-            "k": round(latest['K'], 1),
-            "d": round(latest['D'], 1),
-            "analysis": analyze(name)
+            "chg": 0,
+            "chgPct": 0,
+            "kPat": "整理",
+            "k": k,
+            "d": d,
+            "kdDiv": "無背離",
+            "bb": bb,
+            "bbW": "正常",
+            "sig": signal
         })
 
     except Exception as e:
-        print(f"錯誤: {code} - {e}")
+        print(f"錯誤: {s} - {e}")
 
-# ===== 產生 HTML =====
+print("結果數量:", len(results))
+
+
+# ===== 產HTML =====
 with open("template.html", "r", encoding="utf-8") as f:
     template = Template(f.read())
 
@@ -53,4 +100,4 @@ html = template.render(stocks=results)
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
 
-print("✅ 報告生成完成")
+print("✅ 完成 index.html")
