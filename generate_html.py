@@ -112,6 +112,14 @@ with open(filename, "w", encoding="utf-8") as f:
     f.write(html)
 
 # 同時更新 index.html（給網站用）
+from datetime import datetime
+now = datetime.now().strftime("%m%d%H%M")
+filename = f"持股_{now}.html"
+# ⭐ 產生歷史檔
+with open(filename, "w", encoding="utf-8") as f:
+    f.write(html)
+
+# ⭐ 更新首頁
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
-print("✅ 完成 index.html")
+print("輸出檔案:", filename)
