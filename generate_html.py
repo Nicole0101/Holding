@@ -1,12 +1,25 @@
 from jinja2 import Template
-from data import get_stock_data
+from data import load_stock_list, get_stock_data
 from indicator import add_indicators
 from ai_analysis import analyze
 
-stocks = ["2330", "2317", "2454"]
+stock_list = load_stock_list()
 
 results = []
 
+for s in stock_list:
+    code = str(s["stock_id"])
+    name = s["name"]
+
+    df = get_stock_data(code)
+    df = add_indicators(df)
+
+    results.append({
+        "name": name,
+        "code": code,
+        "price": round(df['close'].iloc[-1], 2),
+        "analysis": analyze(name)
+    })
 for s in stocks:
     df = get_stock_data(s)
     df = add_indicators(df)
