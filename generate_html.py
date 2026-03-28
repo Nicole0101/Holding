@@ -6,7 +6,7 @@ from jinja2 import Template
 
 # ===== 讀取你的持股 CSV =====
 def load_stock_list():
-    df = pd.read_csv("stocks.csv")
+    df = pd.read_csv("stocks.csv", sep="\t")
 
     # ⭐ 中文欄位轉英文（超重要）
     df = df.rename(columns={
