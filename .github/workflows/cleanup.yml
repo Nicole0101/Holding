@@ -1,0 +1,22 @@
+name: Cleanup Reports
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Delete old reports
+        run: rm 持股_*.html || true
+
+      - name: Commit
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@github.com"
+          git add .
+          git commit -m "cleanup reports" || echo "no changes"
+          git push
