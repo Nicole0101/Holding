@@ -1,5 +1,7 @@
 <tbody>
-{% for s in stocks %}
+<script>
+const stocks = {{ stocks | tojson }};
+</script>
 <tr>
   <td>{{ s.name }}</td>
   <td>{{ s.code }}</td>
