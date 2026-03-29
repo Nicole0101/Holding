@@ -38,6 +38,6 @@ jobs:
 
             if [ "$CREATED_TS" -lt "$TEN_MIN_AGO" ]; then
               echo "Deleting run $id (created at $created)"
-              gh run delete $id --confirm
+              gh run delete $id
             fi
           done
