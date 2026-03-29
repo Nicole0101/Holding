@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 import os
 import requests
 
-OPENAI_API_KEY = "你的GPT_API_KEY"
+api_key = os.getenv("OPENAI_API_KEY")
+print(api_key)
 
 def ask_gpt(prompt):
     url = "https://api.openai.com/v1/chat/completions"
