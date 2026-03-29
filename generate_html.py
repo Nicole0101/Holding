@@ -123,6 +123,21 @@ for f in files[3:]:
 
 # ===== LINE 推播 =====
 from line_push import send_line
+buy_count = sum(1 for s in results if s["sig"] == "buy")
+sell_count = sum(1 for s in results if s["sig"] == "sell")
+hold_count = sum(1 for s in results if s["sig"] == "hold")
+watch_count = sum(1 for s in results if s["sig"] == "watch")
+if buy_count > sell_count:
+    market = "偏多 📈"
+elif sell_count > buy_count:
+    market = "偏空 📉"
+else:
+    market = "震盪 🤝"
+msg = f"""📊 台股盤後分析
+盤勢：{market}
+買進：{buy_count}
+賣出：{sell_count}
+觀察：{watch_count}
+中立：{hold_count}
 send_line(f"📊 股票報告已產生\n👉 {filename}")
-send_line_message(f"📊 台股報告已更新：{filename}")
-send_line_message(f"📊 最新報告\nhttps://Nicole0101.github.io/StockHolding-report/")
+send_line(f"📊 最新報告\nhttps://Nicole0101.github.io/StockHolding-report/")
