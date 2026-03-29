@@ -1,12 +1,13 @@
+import os
 import requests
 
-CHANNEL_ACCESS_TOKEN = "c93ada9fc0998b711795598148326345"
-USER_ID = "2009633631"
+TOKEN = os.getenv("LINE_TOKEN")
+USER_ID = os.getenv("LINE_USER_ID")
 
 def send_line(msg):
     url = "https://api.line.me/v2/bot/message/push"
     headers = {
-        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}",
+        "Authorization": f"Bearer {TOKEN}",
         "Content-Type": "application/json"
     }
     data = {
