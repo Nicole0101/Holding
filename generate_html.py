@@ -4,6 +4,22 @@ from data import get_stock_data
 from indicator import add_indicators
 from jinja2 import Template
 
+def get_TWSE_data():
+    url = "https://api.finmindtrade.com/api/v4/data"
+
+    params = {
+        "dataset": "TaiwanStockPrice",
+        "data_id": "TWSE",
+        "start_date": "2024-01-01",
+        "token": API_TOKEN
+    }
+
+    res = requests.get(url, params=params)
+    data = res.json()
+
+    return pd.DataFrame(data["data"])
+
+
 # ===== 讀CSV =====
 def load_stock_list():
     df = pd.read_csv("stocks.csv", sep="\t", encoding="utf-8-sig")
@@ -94,6 +110,23 @@ print("結果數量:", len(results))
 # ===== 產HTML =====
 from datetime import datetime, timedelta
 import os
+
+# ===== 讀大盤 =====
+TWSE = get_TWSE_data()
+latest = TWSE.iloc[-1]
+prev = TWSE.iloc[-2]
+index_value = latest["close"]
+chg = latest["close"] - prev["close"]
+chg_pct = (chg / prev["close"]) * 100
+if chg_pct > 0:
+    market_trend = "偏多 📈"
+else:
+    market_trend = "偏空 📉"
+summary_text = f"""
+加權指數：{round(index_value,2)}
+漲跌：{round(chg,2)} ({round(chg_pct,2)}%)
+盤勢：{market_trend}
+"""
 
 # ===== 產HTML =====
 with open("template.html", "r", encoding="utf-8") as f:
