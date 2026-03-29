@@ -1,10 +1,10 @@
 import requests
 import pandas as pd
+import os
 
+API_TOKEN = os.getenv("FINMIND_TOKEN")
 def get_stock_data(stock_id):
-
     url = "https://api.finmindtrade.com/api/v4/data"
-
     params = {
         "dataset": "TaiwanStockPrice",
         "data_id": str(stock_id),
