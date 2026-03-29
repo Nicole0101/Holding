@@ -92,61 +92,37 @@ for s in stock_list:
 print("結果數量:", len(results))
 
 # ===== 產HTML =====
+from datetime import datetime, timedelta
+import os
+
+# ===== 產HTML =====
 with open("template.html", "r", encoding="utf-8") as f:
     template = Template(f.read())
 html = template.render(stocks=results)
 
-from datetime import datetime
-now = datetime.now().strftime("%m%d%H%M")
-filename = f"持股_{now}.html"
-
-with open(filename, "w", encoding="utf-8") as f:
-    f.write(html)
-
-# ===== 同時更新 index.html（給網站用）===== 
-from datetime import datetime, timedelta
+# 使用統一的時間（UTC+8）
 now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
 filename = f"持股_{now}.html"
-from line_push import send_line
-send_line(f"📊 股票報告已產生\n👉 {filename}")
-# ===== 產生歷史檔===== 
+
+# ===== 產生歷史檔 ===== 
 with open(filename, "w", encoding="utf-8") as f:
     f.write(html)
 
-# ===== 更新首頁===== 
+# ===== 更新首頁 ===== 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
+
 print("輸出檔案:", filename)
 
-import os
 # ===== 清理舊檔（只留最新3份）=====
 files = [f for f in os.listdir() if f.startswith("持股_") and f.endswith(".html")]
-# 依時間排序（新→舊）
 files.sort(reverse=True)
-# 保留前3個，其餘刪掉
 for f in files[3:]:
     os.remove(f)
     print("刪除舊檔:", f)
 
-# LINE 推播
-def send_line_message(msg):
-    try:
-        url = "https://api.line.me/v2/bot/message/push"
-        headers = {
-            "Authorization": f"Bearer {TOKEN}",
-            "Content-Type": "application/json"
-        }
-
-        data = {
-            "to": USER_ID,
-            "messages": [
-                {"type": "text", "text": msg}
-            ]
-        }
-
-        res = requests.post(url, headers=headers, json=data)
-        print("LINE status:", res.status_code)
-    except Exception as e:
-        print("LINE 發送失敗:", e)# 發送通知
+# ===== LINE 推播 =====
+from line_push import send_line
+send_line(f"📊 股票報告已產生\n👉 {filename}")
 send_line_message(f"📊 台股報告已更新：{filename}")
 send_line_message(f"📊 最新報告\nhttps://Nicole0101.github.io/StockHolding-report/")
