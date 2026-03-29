@@ -7,10 +7,9 @@ from datetime import datetime, timedelta
 import os
 import requests
 
-api_key = os.getenv("OPENAI_API_KEY")
-print(api_key)
-
-def ask_gpt(prompt):
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+#======ask_gpt======
+def ask_gpt_json(prompt):
     url = "https://api.openai.com/v1/chat/completions"
 
     headers = {
@@ -21,50 +20,70 @@ def ask_gpt(prompt):
     data = {
         "model": "gpt-4o-mini",
         "messages": [
+            {"role": "system", "content": "請用JSON格式回覆"},
             {"role": "user", "content": prompt}
-        ]
+        ],
+        "response_format": {"type": "json_object"}
     }
 
     res = requests.post(url, headers=headers, json=data)
     return res.json()["choices"][0]["message"]["content"]
 
-stock_summary = "\n".join([
-    f"{s['name']} 漲跌{round(s['chgPct'],2)}% 訊號:{s['sig']}"
-    for s in results[:15]
-])
-
+#======GPT Prompt======
 prompt = f"""
-請產出台股專業分析，分成5段：
-
-1. 台股總覽（指數、漲跌）
-2. 盤勢分析
-3. 強勢族群
-4. 弱勢族群
-5. 個股建議（列出買進與賣出）
-
-資料如下：
+請輸出台股分析，使用JSON格式：
+{{
+"summary": "台股總覽",
+"trend": "盤勢分析",
+"strong_sector": "強勢族群",
+"weak_sector": "弱勢族群",
+"buy_list": ["股票A","股票B"],
+"sell_list": ["股票C"]
+}}
+資料：
 大盤漲跌：{round(chg_pct,2)}%
 
 個股：
 {stock_summary}
-
-請用繁體中文，像分析師報告。
 """
-gpt_report = ask_gpt(prompt)
-sections = gpt_report.split("\n\n")
 
-gpt_1 = sections[0] if len(sections)>0 else ""
-gpt_2 = sections[1] if len(sections)>1 else ""
-gpt_3 = sections[2] if len(sections)>2 else ""
-gpt_4 = sections[3] if len(sections)>3 else ""
-gpt_5 = sections[4] if len(sections)>4 else ""
+#======解析 JSON======
+import json
+gpt_raw = ask_gpt_json(prompt)
+try:
+    gpt_data = json.loads(gpt_raw)
+except:
+    print("GPT解析失敗")
+    gpt_data = {}
 
+#======取值======
+gpt_summary = gpt_data.get("summary", "")
+gpt_trend = gpt_data.get("trend", "")
+gpt_strong = gpt_data.get("strong_sector", "")
+gpt_weak = gpt_data.get("weak_sector", "")
+gpt_buy = ", ".join(gpt_data.get("buy_list", []))
+gpt_sell = ", ".join(gpt_data.get("sell_list", []))
+
+#======HTML render======
+html = template.render(
+    stocks=results,
+    market=market_data,
+
+    gpt_summary=gpt_summary,
+    gpt_trend=gpt_trend,
+    gpt_strong=gpt_strong,
+    gpt_weak=gpt_weak,
+    gpt_buy=gpt_buy,
+    gpt_sell=gpt_sell,
+
+    top_stocks=top_names,
+    weak_stocks=weak_names
+)
 
 API_TOKEN ="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAyMjo0Mzo0NiIsInVzZXJfaWQiOiJuaWNvbGUwMTAxIiwiZW1haWwiOiJuaWNvbGVfbGluQG1zbi5jb20iLCJpcCI6IjM2LjIyNC4yNTMuMjUifQ.bjWqLj9jmNvMA75Jx6H88FhDWh0D1rHVOkVsndXgboA"   # ⭐ 直接寫這裡
 print("FINMIND_TOKEN:", API_TOKEN)    
 def get_TWSE_data():
     url = "https://api.finmindtrade.com/api/v4/data"
-
     params = {
         "dataset": "TaiwanStockPrice",
         "data_id": "TAIEX",   # 確保是這個
@@ -98,7 +117,6 @@ def get_signal(k, d):
         return "hold"
     else:
         return "watch"
-
 
 def get_bb_position(price, upper, lower):
     if price >= upper:
@@ -204,18 +222,12 @@ ai_summary = f"""
 """
 # ===== 讀大盤 =====  
 TWSE = get_TWSE_data()
-if API_TOKEN is None:
-    print("沒有設定 FinMind TOKEN")
-    TWSE = None
 
 if TWSE is None or TWSE.empty or len(TWSE) < 2:
-    print("⚠️ 大盤資料為空，使用預設值")
     index_value = 0
     chg = 0
     chg_pct = 0
     market_trend = "資料不足"
-    summary_text = "⚠️ 無法取得台股資料（請檢查 TOKEN）"
-
 else:
     latest = TWSE.iloc[-1]
     prev = TWSE.iloc[-2]
@@ -225,12 +237,28 @@ else:
     chg_pct = (chg / prev["close"]) * 100
 
     market_trend = "偏多 📈" if chg_pct > 0 else "偏空 📉"
-
     summary_text = f"""
 加權指數：{round(index_value,2)}
 漲跌：{round(chg,2)} ({round(chg_pct,2)}%)
 盤勢：{market_trend}
 """
+
+TWSE = get_TWSE_data()
+
+if TWSE is None or TWSE.empty or len(TWSE) < 2:
+    index_value = 0
+    chg = 0
+    chg_pct = 0
+    market_trend = "資料不足"
+else:
+    latest = TWSE.iloc[-1]
+    prev = TWSE.iloc[-2]
+
+    index_value = latest["close"]
+    chg = latest["close"] - prev["close"]
+    chg_pct = (chg / prev["close"]) * 100
+
+    market_trend = "偏多 📈" if chg_pct > 0 else "偏空 📉"
 
 # ===== 產HTML =====
 with open("template.html", "r", encoding="utf-8") as f:
