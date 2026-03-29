@@ -6,10 +6,10 @@ from jinja2 import Template
 
 import os
 API_TOKEN = os.getenv("FINMIND_TOKEN")
-print("FINMIND TOKEN:", API_TOKEN)
+print("FINMIND_TOKEN:", API_TOKEN)
 
 if API_TOKEN is None:
-    print("⚠️ 沒有設定 FinMind TOKEN")
+    print("⚠️ 沒有設定 FINMIND_TOKEN")
 def get_TWSE_data():
     url = "https://api.finmindtrade.com/api/v4/data"
 
