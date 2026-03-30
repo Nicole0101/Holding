@@ -8,6 +8,8 @@ on:
 env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+  LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+  LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
 
 jobs:
   build:
