@@ -1,6 +1,9 @@
 import os
 import requests
 
+print("TOKEN:", os.getenv("LINE_TOKEN"))
+print("USER_ID:", os.getenv("LINE_USER_ID"))
+
 TOKEN = os.getenv("LINE_TOKEN")
 USER_ID = os.getenv("LINE_USER_ID")
 #    TOKEN ="9M5g3pzqJ0od0O9mHpApPXtrIod0a+NBW3Rp7ZymcAK1AkstRaKqCYU0LaYNs3yjihHw2ANnVZcCeQ20froIJ2CnnFJ7tHQp2JC0e0BnXnmSka7BrJqNNyppbG/JO4uJhG2lHPHv/+/EeVYNdDHhWgdB04t89/1O/w1cDnyilFU="
