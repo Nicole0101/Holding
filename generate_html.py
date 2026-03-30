@@ -110,6 +110,7 @@ for s in stock_list:
             "price": round(latest["close"], 2),
             "chg": round(chg, 2),
             "chgPct": round(chgPct, 2),
+            "amp": round(amplitude, 2),
             "k": round(latest["K"], 1),
             "d": round(latest["D"], 1),
             "bb": get_bb_position(latest["close"], latest["BB_upper"], latest["BB_lower"]),
