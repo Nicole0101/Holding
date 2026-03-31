@@ -120,6 +120,10 @@ pre { white-space:pre-wrap; line-height:1.6; font-size:13px; }
 <th>震幅%</th>
 <th>KD</th>
 <th>布林</th>
+<th>月線%</th>
+<th>季線%</th>
+<th>EPS(4Q)</th>
+<th>年EPS</th>
 <th>訊號</th>
 <th>策略</th>
 </tr>
@@ -176,6 +180,11 @@ function renderRow(s){
         <div class="bb-dot" style="left:${bbPosition(s.bb)}%; background:#58a6ff"></div>
       </div>
     </td>
+
+    <td>{{ s.bias_20 }}%</td>
+    <td>{{ s.bias_60 }}%</td>
+    <td>{{ s.eps_4q | join(",") }}</td>
+    <td>{{ s.eps_est }}</td>
 
     <td><span class="sig ${sigClass[s.sig]}">${sigLabel[s.sig]}</span></td>
     <td>${s.strategy}</td>
