@@ -56,9 +56,11 @@ for s in stock_list:
         amplitude = ((latest["high"] - latest["low"]) / prev["close"]) * 100
 
         # ===== 均線 =====
-        ma20 = df["close"].rolling(20).mean().iloc[-1]
+        ma20 = df["close"].rolling(20).mean().iloc[-1] if len(df) >= 20 else None
+        ma60 = df["close"].rolling(60).mean().iloc[-1] if len(df) >= 60 else None
         bias20 = calc_bias(latest["close"], ma20)
-
+        bias60 = calc_bias(latest["close"], ma60)
+        
         # ===== KD =====
         k = latest["K"]
         d = latest["D"]
@@ -81,6 +83,7 @@ for s in stock_list:
             "chgPct": round(chgPct, 2),
             "amp": round(amplitude, 2),
             "bias20": bias20,
+            "bias60": bias60,
             "k": round(k, 1),
             "d": round(d, 1),
             "bb": get_bb_position(latest["close"], latest["BB_upper"], latest["BB_lower"]),
