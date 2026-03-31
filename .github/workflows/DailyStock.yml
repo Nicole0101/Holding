@@ -1,14 +1,5 @@
 name: DailyStockRpt
 
-- name: Install deps
-  run: pip install pandas jinja2 FinMind
-
-- name: Run data
-  run: python generate.py
-
-- name: Generate HTML
-  run: python generate_html.py
-
 on:
   schedule:
     - cron: "30 6 * * 1-5"  # 🇹🇼 14:30
@@ -23,29 +14,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ========================
+      # 1. Checkout
+      # ========================
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Show masked keys
-        run: |
-          echo "OPENAI: ${OPENAI_API_KEY:0:5}****"
-          echo "FINMIND: ${FINMIND_TOKEN:0:5}****"
-
+      # ========================
+      # 2. Python
+      # ========================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
+      # ========================
+      # 3. Install deps
+      # ========================
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run report script
+      # ========================
+      # 4. Debug（可留）
+      # ========================
+      - name: Show masked keys
+        run: |
+          echo "OPENAI: ${OPENAI_API_KEY:0:5}****"
+          echo "FINMIND: ${FINMIND_TOKEN:0:5}****"
+
+      # ========================
+      # 5. 先跑資料（🔥關鍵）
+      # ========================
+      - name: Run data
+        run: python generate.py
+
+      # ========================
+      # 6. 再產HTML
+      # ========================
+      - name: Generate HTML
         env:
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
         run: python generate_html.py
 
+      # ========================
+      # 7. Commit
+      # ========================
       - name: Commit & Push
         run: |
           git config --global user.name "github-actions[bot]"
