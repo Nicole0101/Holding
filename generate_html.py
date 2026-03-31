@@ -115,7 +115,8 @@ for s in stock_list:
         chg = latest["close"] - prev["close"]
         chgPct = (chg / prev["close"]) * 100
         amplitude = ((latest['high'] - latest['low']) / prev['close']) * 100
-
+        ma20 = df['close'].rolling(20).mean()
+        bias_20 = ((latest['close'] - ma20.iloc[-1]) / ma20.iloc[-1]) * 100
 
         # ===== 波動策略 =====
         k = latest['K']
@@ -139,8 +140,8 @@ for s in stock_list:
             "d": round(latest["D"], 1),
             "bb": get_bb_position(latest["close"], latest["BB_upper"], latest["BB_lower"]),
             "sig": get_signal(latest["K"], latest["D"]),
-            "bias_20": bias_20,
-            "bias_60": bias_60,
+            "bias20": round(bias_20, 2),
+            "bias60": round(bias_60, 2),
             "eps_4q": eps_list,
             "eps_est": eps_est
         })
