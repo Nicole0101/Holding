@@ -3,11 +3,6 @@ from jinja2 import Template
 from datetime import datetime, timedelta
 
 def main():
-
-    # ===== 讀資料 =====
-    with open("data.json", "r", encoding="utf-8") as f:
-        results = json.load(f)
-
     # ===== 排序 =====
     priority = {
         "強勢反彈🚀": 5,
