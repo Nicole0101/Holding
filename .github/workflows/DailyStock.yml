@@ -1,5 +1,14 @@
 name: DailyStockRpt
 
+- name: Install deps
+  run: pip install pandas jinja2 FinMind
+
+- name: Run data
+  run: python generate.py
+
+- name: Generate HTML
+  run: python generate_html.py
+
 on:
   schedule:
     - cron: "30 6 * * 1-5"  # 🇹🇼 14:30
