@@ -224,28 +224,11 @@ def main():
     results = []
 
     # ✅ 一定要在 main 裡面
+    results = []
     for s in stock_list:
-
-        df = get_stock_data(str(s["stock_id"]))
-        if df is None or len(df) < 60:
-            continue
-
-        df = add_indicators(df)
-
-        latest = df.iloc[-1]
-        prev = df.iloc[-2]
-
-        chg = latest["close"] - prev["close"]
-        chgPct = (chg / prev["close"]) * 100
-        amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
-
-        results.append({
-            "name": s["name"],
-            "code": s["stock_id"],
-            "price": round(latest["close"], 2),
-            "chgPct": round(chgPct, 2),
-            "amp": round(amp, 2)
-        })
+        data = process_stock(s)
+        if data:
+        results.append(data)
 
     # ✅ 放在迴圈外
     if not results:
@@ -289,16 +272,7 @@ def main():
         f.write(html)
 
     print("輸出:", filename)
-       
-    
-    # 排序🔥
-    sorted_stocks = sorted(results, key=lambda x: x["chgPct"], reverse=True)
-
-    top_names = ", ".join([s["name"] for s in sorted_stocks[:5]])
-    weak_names = ", ".join([s["name"] for s in sorted_stocks[-5:]])
-
-    rebound_list = [s["name"] for s in results if "反彈" in s["strategy"]]
-    selloff_list = [s["name"] for s in results if "出貨" in s["strategy"]]
+         
 
     # HTML
     with open("template.html", "r", encoding="utf-8") as f:
