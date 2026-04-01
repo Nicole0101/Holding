@@ -106,15 +106,6 @@ def main():
 
     except Exception as e:
         print("寫檔錯誤:", e)
-
-
-# =========================
-# 執行
-# =========================
-if __name__ == "__main__":
-    main()
-
-
 # ===== LINE 專業版推播 =====
 try:
     from line_push import send_line
@@ -181,3 +172,12 @@ https://nicole0101.github.io/StockHolding-report/
 
 except Exception as e:
     print("LINE發送失敗:", e)
+
+
+# =========================
+# 執行
+# =========================
+if __name__ == "__main__":
+    main()
+
+
