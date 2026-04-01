@@ -41,7 +41,7 @@ def get_eps(stock_id):
     params = {
         "dataset": "TaiwanStockFinancialStatements",
         "data_id": stock_id,
-        "start_date": "2023-01-01",
+        "start_date": "2022-01-01",
         "token": FINMIND_TOKEN
     }
 
@@ -61,7 +61,7 @@ def get_eps(stock_id):
     params = {
         "dataset": "TaiwanStockFinancialStatements",
         "data_id": stock_id,
-        "start_date": "2023-01-01",
+        "start_date": "2022-01-01",
         "token": FINMIND_TOKEN
     }
 
@@ -74,8 +74,6 @@ def get_eps(stock_id):
 
     df = df[df["type"] == "EPS"]
     return df.sort_values("date")
-
-# ====================================================
 
 # =========================
 # 指標
@@ -99,7 +97,6 @@ def add_indicators(df):
 
     return df
 
-
 # =========================
 # 距離（你指定版本）
 # =========================
@@ -107,7 +104,6 @@ def calc_dist(price, ma):
     if ma == 0 or pd.isna(ma):
         return None
     return round((price - ma) / ma * 100, 2)
-
 
 # =========================
 # 單股處理🔥
