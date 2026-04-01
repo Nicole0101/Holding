@@ -7,29 +7,33 @@ import os
 FINMIND_TOKEN = os.getenv("FINMIND_TOKEN")
 
 # =========================
-# 抓股價（FinMind）
+# 抓股價
 # =========================
 def get_stock_data(stock_id):
-    url = "https://api.finmindtrade.com/api/v4/data"
+    try:
+        url = "https://api.finmindtrade.com/api/v4/data"
+        params = {
+            "dataset": "TaiwanStockPrice",
+            "data_id": stock_id,
+            "start_date": "2024-01-01",
+            "token": FINMIND_TOKEN
+        }
 
-    params = {
-        "dataset": "TaiwanStockPrice",
-        "data_id": stock_id,
-        "start_date": "2024-01-01",
-        "token": FINMIND_TOKEN
-    }
+        res = requests.get(url, params=params)
+        data = res.json().get("data", [])
 
-    res = requests.get(url, params=params)
-    data = res.json().get("data", [])
+        df = pd.DataFrame(data)
+        if df.empty:
+            return None
 
-    df = pd.DataFrame(data)
-    if df.empty:
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date")
+
+        return df
+
+    except Exception as e:
+        print("抓資料錯誤:", stock_id, e)
         return None
-
-    df["date"] = pd.to_datetime(df["date"])
-    df = df.sort_values("date")
-
-    return df
 
 
 # =========================
@@ -56,7 +60,7 @@ def add_indicators(df):
 
 
 # =========================
-# 距離
+# 距離（你指定版本）
 # =========================
 def calc_dist(price, ma):
     if ma == 0 or pd.isna(ma):
@@ -72,4 +76,143 @@ def process_stock(s):
     try:
         df = get_stock_data(str(s["stock_id"]))
         if df is None or len(df) < 60:
-            return
+            return None
+
+        df = add_indicators(df)
+
+        latest = df.iloc[-1]
+        prev = df.iloc[-2]
+
+        # 漲跌
+        chg = latest["close"] - prev["close"]
+        chgPct = (chg / prev["close"]) * 100
+
+        # 震幅（正確🔥）
+        amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
+
+        # 均線
+        ma20 = df["close"].rolling(20).mean().iloc[-1]
+        ma60 = df["close"].rolling(60).mean().iloc[-1]
+
+        dist20 = calc_dist(latest["close"], ma20)
+        dist60 = calc_dist(latest["close"], ma60)
+
+        k = latest["K"]
+        d = latest["D"]
+
+        # 策略🔥
+        if amp > 5 and k < 30:
+            strategy = "反彈🔥"
+        elif amp > 5 and k > 70:
+            strategy = "出貨⚠"
+        elif amp < 2:
+            strategy = "整理"
+        else:
+            strategy = "觀察"
+
+        return {
+            "name": s["name"],
+            "code": s["stock_id"],
+            "price": round(latest["close"], 2),
+            "chg": round(chg, 2),
+            "chgPct": round(chgPct, 2),
+            "amp": round(amp, 2),
+            "dist20": dist20,
+            "dist60": dist60,
+            "k": round(k, 1),
+            "d": round(d, 1),
+            "bb": "上軌" if latest["close"] > latest["BB_upper"] else
+                  "下軌" if latest["close"] < latest["BB_lower"] else "中軌",
+            "sig": "buy" if k < 30 else "sell" if k > 70 else "hold",
+            "strategy": strategy
+        }
+
+    except Exception as e:
+        print("單股錯誤:", s["stock_id"], e)
+        return None
+
+
+# =========================
+# 主程式🔥
+# =========================
+def main():
+
+    # 讀股票清單
+    df = pd.read_csv("stocks.csv", sep="\t", encoding="utf-8-sig")
+    df = df.rename(columns={"Ticker": "stock_id", "Name": "name"})
+    stock_list = df.to_dict(orient="records")
+
+    results = []
+
+    for s in stock_list:
+        data = process_stock(s)
+        if data:
+            results.append(data)
+
+    print("結果數量:", len(results))
+
+    if not results:
+        print("⚠️ 無資料")
+        return
+
+    # 排序🔥
+    sorted_stocks = sorted(results, key=lambda x: x["chgPct"], reverse=True)
+
+    top_names = ", ".join([s["name"] for s in sorted_stocks[:5]])
+    weak_names = ", ".join([s["name"] for s in sorted_stocks[-5:]])
+
+    rebound_list = [s["name"] for s in results if "反彈" in s["strategy"]]
+    selloff_list = [s["name"] for s in results if "出貨" in s["strategy"]]
+
+    # HTML
+    with open("template.html", "r", encoding="utf-8") as f:
+        template = Template(f.read())
+
+    html = template.render(
+        stocks=sorted_stocks,
+        top_stocks=top_names,
+        weak_stocks=weak_names,
+        rebound_list=", ".join(rebound_list[:5]),
+        selloff_list=", ".join(selloff_list[:5])
+    )
+
+    now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
+    filename = f"持股_{now}.html"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print("輸出:", filename)
+
+    # =========================
+    # LINE🔥
+    # =========================
+    try:
+        from line_push import send_line
+
+        top5 = [f"{s['name']}({s['chgPct']}%)" for s in sorted_stocks[:5]]
+        weak5 = [f"{s['name']}({s['chgPct']}%)" for s in sorted_stocks[-5:]]
+
+        msg = f"""
+📊 台股技術分析
+
+🔥 強勢股
+{chr(10).join(top5)}
+
+⚠ 弱勢股
+{chr(10).join(weak5)}
+
+📎 https://nicole0101.github.io/StockHolding-report/
+"""
+
+        send_line(msg.strip())
+
+    except Exception as e:
+        print("LINE錯誤:", e)
+
+
+if __name__ == "__main__":
+    main()
