@@ -29,16 +29,42 @@ def get_results_safe():
         return []
 
 
+def process_stock(s):
+    try:
+        df = get_stock_data(str(s["stock_id"]))
+        df = add_indicators(df)
+
+        if df is None or len(df) < 2:
+            return None
+
+        latest = df.iloc[-1]
+        prev = df.iloc[-2]
+
+        chg = latest["close"] - prev["close"]
+        chgPct = (chg / prev["close"]) * 100
+
+        return {
+            "name": s["name"],
+            "code": s["stock_id"],
+            "chgPct": round(chgPct, 2),
+            "strategy": "觀察",
+            "sig": "hold"
+        }
+
+    except Exception as e:
+        print("錯誤:", e)
+        return None
 # =========================
 # 主程式（🔥全部集中）
 # =========================
 def main():
 
     # ===== 資料 =====
-    results = get_results_safe()
-
-    if not results:
-        print("⚠️ 無資料")
+    results = []
+        for s in stock_list:
+        data = process_stock(s)
+        if data:
+            results.append(data)
 
     # ===== 排序 =====
     priority = {
@@ -78,7 +104,7 @@ def main():
             rebound_list=", ".join(rebound_list[:5]) if rebound_list else "-",
             selloff_list=", ".join(selloff_list[:5]) if selloff_list else "-"
         )
-
+        print("前5筆:", sorted_stocks[:5])
     except Exception as e:
         print("HTML錯誤:", e)
         html = "<h1>HTML ERROR</h1>"
