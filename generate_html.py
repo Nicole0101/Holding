@@ -214,6 +214,8 @@ def process_stock(s):
 # =========================
 def main():
 
+    import json
+
     # 讀股票清單
     df = pd.read_csv("stocks.csv", sep="\t", encoding="utf-8-sig")
     df = df.rename(columns={"Ticker": "stock_id", "Name": "name"})
@@ -221,41 +223,74 @@ def main():
 
     results = []
 
-for s in stock_list:
+    # ✅ 一定要在 main 裡面
+    for s in stock_list:
 
-    df = get_stock_data(str(s["stock_id"]))
-    if df is None or len(df) < 60:
-        continue
+        df = get_stock_data(str(s["stock_id"]))
+        if df is None or len(df) < 60:
+            continue
 
-    df = add_indicators(df)
+        df = add_indicators(df)
 
-    latest = df.iloc[-1]
-    prev = df.iloc[-2]
+        latest = df.iloc[-1]
+        prev = df.iloc[-2]
 
-    chg = latest["close"] - prev["close"]
-    chgPct = (chg / prev["close"]) * 100
+        chg = latest["close"] - prev["close"]
+        chgPct = (chg / prev["close"]) * 100
+        amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
 
-    amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
+        results.append({
+            "name": s["name"],
+            "code": s["stock_id"],
+            "price": round(latest["close"], 2),
+            "chgPct": round(chgPct, 2),
+            "amp": round(amp, 2)
+        })
 
-    results.append({
-        "name": s["name"],
-        "code": s["stock_id"],
-        "price": round(latest["close"], 2),
-        "chgPct": round(chgPct, 2),
-        "amp": round(amp, 2)
-    })
-
-
-    print("結果數量:", len(results))
-    
-    import json
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-        
+    # ✅ 放在迴圈外
     if not results:
         print("⚠️ 無資料")
         return
 
+    print("結果數量:", len(results))
+
+    # 存 JSON
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=2)
+
+    # 排序🔥
+    sorted_stocks = sorted(results, key=lambda x: x["chgPct"], reverse=True)
+
+    top_names = ", ".join([s["name"] for s in sorted_stocks[:5]])
+    weak_names = ", ".join([s["name"] for s in sorted_stocks[-5:]])
+
+    rebound_list = [s["name"] for s in results if "反彈" in s.get("strategy", "")]
+    selloff_list = [s["name"] for s in results if "出貨" in s.get("strategy", "")]
+
+    # HTML
+    with open("template.html", "r", encoding="utf-8") as f:
+        template = Template(f.read())
+
+    html = template.render(
+        stocks=sorted_stocks,
+        top_stocks=top_names,
+        weak_stocks=weak_names,
+        rebound_list=", ".join(rebound_list[:5]),
+        selloff_list=", ".join(selloff_list[:5])
+    )
+
+    now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
+    filename = f"持股_{now}.html"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print("輸出:", filename)
+       
+    
     # 排序🔥
     sorted_stocks = sorted(results, key=lambda x: x["chgPct"], reverse=True)
 
@@ -288,9 +323,10 @@ for s in stock_list:
 
     print("輸出:", filename)
 
-    # =========================
-    # LINE🔥
-    # =========================
+
+# =========================
+# LINE🔥
+# =========================
     try:
         from line_push import send_line
 
