@@ -228,7 +228,7 @@ def main():
     for s in stock_list:
         data = process_stock(s)
         if data:
-        results.append(data)
+            results.append(data)
 
     # ✅ 放在迴圈外
     if not results:
