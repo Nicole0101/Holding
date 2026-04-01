@@ -70,7 +70,7 @@ def get_eps(stock_id):
 
     if df.empty:
         return None
-
+    df["date"] = pd.to_datetime(df["date"])
     df = df[df["type"] == "EPS"]
     return df.sort_values("date")
 
