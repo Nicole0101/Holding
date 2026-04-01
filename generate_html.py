@@ -34,7 +34,48 @@ def get_stock_data(stock_id):
     except Exception as e:
         print("抓資料錯誤:", stock_id, e)
         return None
+        
+===============================================
+def get_eps(stock_id):
+    url = "https://api.finmindtrade.com/api/v4/data"
+    params = {
+        "dataset": "TaiwanStockFinancialStatements",
+        "data_id": stock_id,
+        "start_date": "2023-01-01",
+        "token": FINMIND_TOKEN
+    }
 
+    res = requests.get(url, params=params)
+    data = res.json().get("data", [])
+    df = pd.DataFrame(data)
+
+    if df.empty:
+        return None
+
+    df = df[df["type"] == "EPS"]
+    return df.sort_values("date")
+
+================================================
+def get_eps(stock_id):
+    url = "https://api.finmindtrade.com/api/v4/data"
+    params = {
+        "dataset": "TaiwanStockFinancialStatements",
+        "data_id": stock_id,
+        "start_date": "2023-01-01",
+        "token": FINMIND_TOKEN
+    }
+
+    res = requests.get(url, params=params)
+    data = res.json().get("data", [])
+    df = pd.DataFrame(data)
+
+    if df.empty:
+        return None
+
+    df = df[df["type"] == "EPS"]
+    return df.sort_values("date")
+
+====================================================
 
 # =========================
 # 指標
@@ -87,9 +128,41 @@ def process_stock(s):
         chg = latest["close"] - prev["close"]
         chgPct = (chg / prev["close"]) * 100
 
-        # 震幅（正確🔥）
+        # 震幅
         amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
 
+        # 去年 EPS（含季數）
+        eps_df = get_eps(s["stock_id"])
+        last_eps = None
+        eps_note = ""
+        if eps_df is not None and not eps_df.empty:
+            latest_year = eps_df["date"].dt.year.max()
+            year_df = eps_df[eps_df["date"].dt.year == latest_year]
+            eps_sum = year_df["value"].sum()
+            quarters = len(year_df)
+            last_eps = round(eps_sum, 2)
+        if quarters < 4:
+            eps_note = f"({quarters})"
+
+        # Yield（殖利率）
+        div_df = get_dividend(s["stock_id"])
+        yield_pct = None
+        if div_df is not None and not div_df.empty:
+            last_div = div_df.iloc[-1]["CashDividendPayment"]
+        if last_div and latest["close"] > 0:
+            yield_pct = round(last_div / latest["close"] * 100, 2)
+
+        # PER（本益比）
+        per = None
+        if last_eps and last_eps != 0:
+            per = round(latest["close"] / last_eps, 2)
+
+        # Eet.EPS
+        est_eps = None
+        if last_eps:
+            growth = 0.1   # 👉 你可以改（10%成長）
+            est_eps = round(last_eps * (1 + growth), 2)
+        
         # 均線
         ma20 = df["close"].rolling(20).mean().iloc[-1]
         ma60 = df["close"].rolling(60).mean().iloc[-1]
@@ -117,6 +190,10 @@ def process_stock(s):
             "chg": round(chg, 2),
             "chgPct": round(chgPct, 2),
             "amp": round(amp, 2),
+            "eps_last": f"{last_eps}{eps_note}" if last_eps else "-",
+            "yield": yield_pct,
+            "per": per,
+            "est_eps": est_eps
             "dist20": dist20,
             "dist60": dist60,
             "k": round(k, 1),
