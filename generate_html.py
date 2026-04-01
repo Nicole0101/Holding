@@ -221,10 +221,30 @@ def main():
 
     results = []
 
-    for s in stock_list:
-        get_stock_data()
-        get_eps()
-        get_dividend()
+for s in stock_list:
+
+    df = get_stock_data(str(s["stock_id"]))
+    if df is None or len(df) < 60:
+        continue
+
+    df = add_indicators(df)
+
+    latest = df.iloc[-1]
+    prev = df.iloc[-2]
+
+    chg = latest["close"] - prev["close"]
+    chgPct = (chg / prev["close"]) * 100
+
+    amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
+
+    results.append({
+        "name": s["name"],
+        "code": s["stock_id"],
+        "price": round(latest["close"], 2),
+        "chgPct": round(chgPct, 2),
+        "amp": round(amp, 2)
+    })
+
 
     print("結果數量:", len(results))
     
