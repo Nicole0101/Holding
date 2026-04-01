@@ -35,7 +35,7 @@ def get_stock_data(stock_id):
         print("抓資料錯誤:", stock_id, e)
         return None
         
-===============================================
+# ===============================================
 def get_eps(stock_id):
     url = "https://api.finmindtrade.com/api/v4/data"
     params = {
@@ -55,7 +55,7 @@ def get_eps(stock_id):
     df = df[df["type"] == "EPS"]
     return df.sort_values("date")
 
-================================================
+# ================================================
 def get_eps(stock_id):
     url = "https://api.finmindtrade.com/api/v4/data"
     params = {
@@ -75,7 +75,7 @@ def get_eps(stock_id):
     df = df[df["type"] == "EPS"]
     return df.sort_values("date")
 
-====================================================
+# ====================================================
 
 # =========================
 # 指標
