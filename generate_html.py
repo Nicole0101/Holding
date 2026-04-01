@@ -1,177 +1,75 @@
 import pandas as pd
+import requests
 from jinja2 import Template
 from datetime import datetime, timedelta
+import os
+
+FINMIND_TOKEN = os.getenv("FINMIND_TOKEN")
 
 # =========================
-# 資料來源（安全版）
+# 抓股價（FinMind）
 # =========================
-def get_results_safe():
-    try:
-        df = pd.read_csv("stocks.csv", sep="\t", encoding="utf-8-sig")
-        df = df.rename(columns={"Ticker": "stock_id", "Name": "name"})
-        stock_list = df.to_dict(orient="records")
+def get_stock_data(stock_id):
+    url = "https://api.finmindtrade.com/api/v4/data"
 
-        results = []
-
-        for s in stock_list:
-            results.append({
-                "name": s["name"],
-                "code": s["stock_id"],
-                "chgPct": 0,
-                "strategy": "觀察",
-                "sig": "hold"
-            })
-
-        return results
-
-    except Exception as e:
-        print("讀取 stocks.csv 失敗:", e)
-        return []
-
-
-def process_stock(s):
-    try:
-        df = get_stock_data(str(s["stock_id"]))
-        df = add_indicators(df)
-
-        if df is None or len(df) < 2:
-            return None
-
-        latest = df.iloc[-1]
-        prev = df.iloc[-2]
-
-        chg = latest["close"] - prev["close"]
-        chgPct = (chg / prev["close"]) * 100
-
-        return {
-            "name": s["name"],
-            "code": s["stock_id"],
-            "chgPct": round(chgPct, 2),
-            "strategy": "觀察",
-            "sig": "hold"
-        }
-
-    except Exception as e:
-        print("錯誤:", e)
-        return None
-# =========================
-# 主程式（🔥全部集中）
-# =========================
-def main():
-
-    # ===== 資料 =====
-    results = []
-        for s in stock_list:
-        data = process_stock(s)
-        if data:
-            results.append(data)
-
-    # ===== 排序 =====
-    priority = {
-        "強勢反彈🚀": 5,
-        "反彈🔥": 4,
-        "觀察": 3,
-        "整理": 2,
-        "出貨⚠": 1,
-        "主力出貨💀": 0
+    params = {
+        "dataset": "TaiwanStockPrice",
+        "data_id": stock_id,
+        "start_date": "2024-01-01",
+        "token": FINMIND_TOKEN
     }
 
-    sorted_stocks = sorted(
-        results,
-        key=lambda x: (
-            priority.get(x.get("strategy", ""), 0),
-            x.get("chgPct", 0)
-        ),
-        reverse=True
-    )
+    res = requests.get(url, params=params)
+    data = res.json().get("data", [])
 
-    # ===== Top / Weak =====
-    top_names = ", ".join([s["name"] for s in sorted_stocks[:5]]) if sorted_stocks else "-"
-    weak_names = ", ".join([s["name"] for s in sorted_stocks[-5:]]) if sorted_stocks else "-"
+    df = pd.DataFrame(data)
+    if df.empty:
+        return None
 
-    rebound_list = [s["name"] for s in results if "反彈" in s.get("strategy", "")]
-    selloff_list = [s["name"] for s in results if "出貨" in s.get("strategy", "")]
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date")
 
-    # ===== HTML =====
-    try:
-        with open("template.html", "r", encoding="utf-8") as f:
-            template = Template(f.read())
-
-        html = template.render(
-            stocks=sorted_stocks,
-            top_stocks=top_names,
-            weak_stocks=weak_names,
-            rebound_list=", ".join(rebound_list[:5]) if rebound_list else "-",
-            selloff_list=", ".join(selloff_list[:5]) if selloff_list else "-"
-        )
-        print("前5筆:", sorted_stocks[:5])
-    except Exception as e:
-        print("HTML錯誤:", e)
-        html = "<h1>HTML ERROR</h1>"
-
-    # ===== 存檔 =====
-    now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
-    filename = f"持股_{now}.html"
-
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(html)
-
-    with open("index.html", "w", encoding="utf-8") as f:
-        f.write(html)
-
-    print("輸出:", filename)
-
-    # =========================
-    # 🔥 LINE（修正重點🔥）
-    # =========================
-    try:
-        from line_push import send_line
-
-        buy_count = sum(1 for s in results if s.get("sig") == "buy")
-        sell_count = sum(1 for s in results if s.get("sig") == "sell")
-        watch_count = sum(1 for s in results if s.get("sig") == "watch")
-        hold_count = sum(1 for s in results if s.get("sig") == "hold")
-
-        if buy_count > sell_count:
-            market = "偏多 📈"
-        elif sell_count > buy_count:
-            market = "偏空 📉"
-        else:
-            market = "震盪 🤝"
-
-        top5 = [f"{s['name']}({s['chgPct']}%)" for s in sorted_stocks[:5]]
-        weak5 = [f"{s['name']}({s['chgPct']}%)" for s in sorted_stocks[-5:]]
-
-        msg = f"""
-📊 台股技術分析報告
-
-━━━━━━━━━━━━━━━
-📈 市場狀態：{market}
-
-🧭 訊號
-買:{buy_count} 賣:{sell_count}
-觀:{watch_count} 中:{hold_count}
-
-━━━━━━━━━━━━━━━
-🔥 強勢股
-{chr(10).join(top5)}
-
-⚠ 弱勢股
-{chr(10).join(weak5)}
-
-━━━━━━━━━━━━━━━
-📎 報告
-https://nicole0101.github.io/StockHolding-report/
-"""
-
-        send_line(msg.strip())
-
-    except Exception as e:
-        print("LINE發送失敗:", e)
+    return df
 
 
 # =========================
-# 執行
+# 指標
 # =========================
-if __name__ == "__main__":
-    main()
+def add_indicators(df):
+
+    # KD
+    low_min = df["min"].rolling(9).min()
+    high_max = df["max"].rolling(9).max()
+    rsv = (df["close"] - low_min) / (high_max - low_min) * 100
+
+    df["K"] = rsv.ewm(com=2).mean()
+    df["D"] = df["K"].ewm(com=2).mean()
+
+    # 布林
+    ma20 = df["close"].rolling(20).mean()
+    std = df["close"].rolling(20).std()
+
+    df["BB_upper"] = ma20 + 2 * std
+    df["BB_lower"] = ma20 - 2 * std
+
+    return df
+
+
+# =========================
+# 距離
+# =========================
+def calc_dist(price, ma):
+    if ma == 0 or pd.isna(ma):
+        return None
+    return round((price - ma) / ma * 100, 2)
+
+
+# =========================
+# 單股處理🔥
+# =========================
+def process_stock(s):
+
+    try:
+        df = get_stock_data(str(s["stock_id"]))
+        if df is None or len(df) < 60:
+            return
