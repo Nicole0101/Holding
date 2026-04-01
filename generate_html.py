@@ -56,24 +56,17 @@ def get_eps(stock_id):
     return df.sort_values("date")
 
 # ================================================
-def get_eps(stock_id):
-    url = "https://api.finmindtrade.com/api/v4/data"
-    params = {
-        "dataset": "TaiwanStockFinancialStatements",
-        "data_id": stock_id,
-        "start_date": "2022-01-01",
-        "token": FINMIND_TOKEN
-    }
+def est_eps(stock_id):
+    api = DataLoader()
+    eps_df = api.taiwan_stock_eps(stock_id=stock_id)
+    eps_df = eps_df.sort_values("date", ascending=False).head(4)
+    ttm_eps = eps_df["eps"].sum()
 
-    res = requests.get(url, params=params)
-    data = res.json().get("data", [])
-    df = pd.DataFrame(data)
-
-    if df.empty:
-        return None
-
-    df = df[df["type"] == "EPS"]
-    return df.sort_values("date")
+    rev = api.taiwan_stock_month_revenue(stock_id=stock_id)
+    rev["YoY"] = rev["revenue"].pct_change(12)
+    growth = rev.sort_values("date").tail(3)["YoY"].mean()
+    estimated_eps = ttm_eps * (1 + growth)
+    return round(ttm_eps, 2), round(estimated_eps, 2)
 
 # =========================
 # 指標
@@ -109,7 +102,6 @@ def calc_dist(price, ma):
 # 單股處理🔥
 # =========================
 def process_stock(s):
-
     try:
         df = get_stock_data(str(s["stock_id"]))
         if df is None or len(df) < 60:
@@ -120,46 +112,54 @@ def process_stock(s):
         latest = df.iloc[-1]
         prev = df.iloc[-2]
 
-        # 漲跌
+        # ===== 漲跌 =====
         chg = latest["close"] - prev["close"]
         chgPct = (chg / prev["close"]) * 100
 
-        # 震幅
+        # ===== 震幅 =====
         amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
 
-        # 去年 EPS（含季數）
+        # ===== EPS =====
         eps_df = get_eps(s["stock_id"])
         last_eps = None
         eps_note = ""
+        quarters = 0
+
         if eps_df is not None and not eps_df.empty:
             latest_year = eps_df["date"].dt.year.max()
             year_df = eps_df[eps_df["date"].dt.year == latest_year]
+
             eps_sum = year_df["value"].sum()
             quarters = len(year_df)
-            last_eps = round(eps_sum, 2)
-        if quarters < 4:
-            eps_note = f"({quarters})"
 
-        # Yield（殖利率）
-        div_df = get_dividend(s["stock_id"])
+            last_eps = round(eps_sum, 2)
+
+            if quarters < 4:
+                eps_note = f"({quarters})"
+
+        # ===== 殖利率 =====
         yield_pct = None
+        last_div = None
+
+        div_df = get_dividend(s["stock_id"])
         if div_df is not None and not div_df.empty:
-            last_div = div_df.iloc[-1]["CashDividendPayment"]
+            last_div = div_df.iloc[-1].get("CashDividendPayment")
+
         if last_div and latest["close"] > 0:
             yield_pct = round(last_div / latest["close"] * 100, 2)
 
-        # PER（本益比）
+        # ===== PER =====
         per = None
         if last_eps and last_eps != 0:
             per = round(latest["close"] / last_eps, 2)
 
-        # Eet.EPS
+        # ===== 預估 EPS =====
         est_eps = None
         if last_eps:
-            growth = 0.1   # 👉 你可以改（10%成長）
+            growth = 0.1
             est_eps = round(last_eps * (1 + growth), 2)
-        
-        # 均線
+
+        # ===== 均線 =====
         ma20 = df["close"].rolling(20).mean().iloc[-1]
         ma60 = df["close"].rolling(60).mean().iloc[-1]
 
@@ -169,7 +169,7 @@ def process_stock(s):
         k = latest["K"]
         d = latest["D"]
 
-        # 策略🔥
+        # ===== 策略 =====
         if amp > 5 and k < 30:
             strategy = "反彈🔥"
         elif amp > 5 and k > 70:
@@ -189,13 +189,17 @@ def process_stock(s):
             "eps_last": f"{last_eps}{eps_note}" if last_eps else "-",
             "yield": yield_pct,
             "per": per,
-            "est_eps": est_eps
+            "est_eps": est_eps,  # ✅ 修正
+
             "dist20": dist20,
             "dist60": dist60,
             "k": round(k, 1),
             "d": round(d, 1),
-            "bb": "上軌" if latest["close"] > latest["BB_upper"] else
-                  "下軌" if latest["close"] < latest["BB_lower"] else "中軌",
+
+            "bb": "上軌" if latest["close"] > latest["BB_upper"]
+                  else "下軌" if latest["close"] < latest["BB_lower"]
+                  else "中軌",
+
             "sig": "buy" if k < 30 else "sell" if k > 70 else "hold",
             "strategy": strategy
         }
@@ -218,9 +222,9 @@ def main():
     results = []
 
     for s in stock_list:
-        data = process_stock(s)
-        if data:
-            results.append(data)
+        get_stock_data()
+        get_eps()
+        get_dividend()
 
     print("結果數量:", len(results))
     
