@@ -44,35 +44,55 @@ def get_dividend(stock_id):
             "start_date": "2022-01-01",
             "token": FINMIND_TOKEN
         }
+
         res = requests.get(url, params=params)
-        # ✅ 檢查 API 狀態
+
         if res.status_code != 200:
             print(f"{stock_id} API失敗:", res.status_code)
             return None
-        json_data = res.json()
-        data = json_data.get("data", [])
+
+        data = res.json().get("data", [])
         if not data:
             print(f"{stock_id} 沒有股利資料")
             return None
+
         df = pd.DataFrame(data)
-        # ✅ 日期欄位安全處理
-        if "date" in df.columns:
-            df["date"] = pd.to_datetime(df["date"], errors="coerce")
-        else:
-            df["date"] = None
-        # ✅ 現金股利欄位判斷
+
+        # 日期處理
+        df["date"] = pd.to_datetime(df.get("date"), errors="coerce")
+
+        # 現金股利欄位判斷
         if "CashEarningsDistribution" in df.columns:
             col = "CashEarningsDistribution"
         elif "CashDividendPayment" in df.columns:
             col = "CashDividendPayment"
         else:
             print(f"{stock_id} 沒有現金股利欄位:", df.columns.tolist())
-            df["cash_dividend"] = None
-            return df
+            return None
+
         df["cash_dividend"] = pd.to_numeric(df[col], errors="coerce")
-        # ✅ 排序（常用）
-        df = df.sort_values("date", ascending=False)
-        return df
+
+        # 年份欄位
+        df["year"] = df["date"].dt.year
+
+        current_year = datetime.now().year
+        last_year = current_year - 1
+
+        # 👉 去年資料
+        df_last = df[df["year"] == last_year]
+
+        if df_last.empty:
+            return "無資料"
+
+        total_div = df_last["cash_dividend"].sum()
+        count = df_last["cash_dividend"].count()
+
+        # 👉 判斷是否完整（台股通常一年1次或4次）
+        if count >= 4:
+            return round(total_div, 2)
+        else:
+            return f"{round(total_div,2)}（累計{count}季）"
+
     except Exception as e:
         print("股利錯誤:", stock_id, e)
         return None
