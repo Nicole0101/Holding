@@ -49,9 +49,23 @@ def get_dividend(stock_id):
         res = requests.get(url, params=params)
         data = res.json().get("data", [])
 
-        return pd.DataFrame(data)
+        df = pd.DataFrame(data)
 
-    except:
+        if df.empty:
+            return None
+
+        # ⭐ 確保 date 正確
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+        # ⭐ 股利轉數值
+        df["CashDividendPayment"] = pd.to_numeric(
+            df["CashDividendPayment"], errors="coerce"
+        )
+
+        return df
+
+    except Exception as e:
+        print("股利錯誤:", stock_id, e)
         return None
 
 # ===============================================
