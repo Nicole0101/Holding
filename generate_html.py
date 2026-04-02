@@ -19,20 +19,18 @@ def get_stock_data(stock_id):
             "token": FINMIND_TOKEN
         }    
 
-res = requests.get(url, params=params)
-data = res.json().get("data", [])
+        res = requests.get(url, params=params)
+        data = res.json().get("data", [])
 
-df = pd.DataFrame(data)
-if df.empty:
-return None
-df["date"] = pd.to_datetime(df["date"])
-df = df.sort_values("date")
-
-return df
-
-except Exception as e:
-print("抓資料錯誤:", stock_id, e)
-return None
+    df = pd.DataFrame(data)
+        if df.empty:
+            return None
+            df["date"] = pd.to_datetime(df["date"])
+            df = df.sort_values("date")
+        return df
+    except Exception as e:
+    print("抓資料錯誤:", stock_id, e)
+    return None
 
 # ===============================================
 def get_dividend(stock_id):
