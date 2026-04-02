@@ -171,23 +171,15 @@ def process_stock(s):
                 eps_note = f"({quarters})"
 
         # ===== 殖利率 =====
-        yield_pct = None
-        last_div = None
-        div_df = get_dividend(s["stock_id"])
-        if div_df is not None and not div_df.empty:
-        # 取最新一筆
-            last_row = div_df.sort_values("date").iloc[-1]
-            last_div = last_row.get("CashDividendPayment")
-        # ✅ 防呆：確保是數值
-        if pd.notna(last_div):
-            try:
-                last_div = float(last_div)
-            except:
-                last_div = None
-
-        # ✅ 正確判斷條件（關鍵🔥）
-        if last_div is not None and last_div > 0 and latest["close"] > 0:
-            yield_pct = round(last_div / latest["close"] * 100, 2)
+    yield_pct = None
+    div_df = get_dividend(s["stock_id"])
+    if div_df is not None and not div_df.empty:
+        div_df = div_df.dropna(subset=["date", "CashDividendPayment"])
+    if not div_df.empty:
+        last_year = div_df["date"].dt.year.max()
+        year_div = div_df[div_df["date"].dt.year == last_year]["CashDividendPayment"].sum()
+        if latest["close"] > 0 and year_div > 0:
+            yield_pct = round(year_div / latest["close"] * 100, 2)
 
         # ===== PER =====
         per = None
