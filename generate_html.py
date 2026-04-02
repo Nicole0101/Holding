@@ -46,55 +46,65 @@ def get_dividend(stock_id):
         }
 
         res = requests.get(url, params=params)
-
         if res.status_code != 200:
             print(f"{stock_id} API失敗:", res.status_code)
             return None
 
         data = res.json().get("data", [])
         if not data:
-            print(f"{stock_id} 沒有股利資料")
             return None
 
         df = pd.DataFrame(data)
 
-        # 日期處理
+        # 日期
         df["date"] = pd.to_datetime(df.get("date"), errors="coerce")
+        df = df.dropna(subset=["date"])
 
-        # 現金股利欄位判斷
+        # 欄位判斷
         if "CashEarningsDistribution" in df.columns:
             col = "CashEarningsDistribution"
         elif "CashDividendPayment" in df.columns:
             col = "CashDividendPayment"
         else:
-            print(f"{stock_id} 沒有現金股利欄位:", df.columns.tolist())
             return None
 
         df["cash_dividend"] = pd.to_numeric(df[col], errors="coerce")
+        df = df.dropna(subset=["cash_dividend"])
 
-        # 年份欄位
+        if df.empty:
+            return None
+
+        # 年份
         df["year"] = df["date"].dt.year
 
         current_year = datetime.now().year
         last_year = current_year - 1
 
-        # 👉 去年資料
+        # 👉 優先抓去年
         df_last = df[df["year"] == last_year]
 
+        # 👉 如果去年沒有 → 抓最新一年
         if df_last.empty:
-            return "無資料"
+            latest_year = df["year"].max()
+            df_last = df[df["year"] == latest_year]
+
+        if df_last.empty:
+            return None
 
         total_div = df_last["cash_dividend"].sum()
         count = df_last["cash_dividend"].count()
 
-        # 👉 判斷是否完整（台股通常一年1次或4次）
+        if count == 0:
+            return None
+
+        # 👉 判斷完整 vs 累計
         if count >= 4:
             return round(total_div, 2)
         else:
             return f"{round(total_div,2)}（累計{count}季）"
 
     except Exception as e:
-        print("股利錯誤:", stock_id, e)
+        print(f"股利錯誤: {stock_id}", e)
         return None
 
 # ===============================================
