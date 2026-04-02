@@ -45,23 +45,33 @@ def get_dividend(stock_id):
             "token": FINMIND_TOKEN
         }
         res = requests.get(url, params=params)
-        data = res.json().get("data", [])
-        df = pd.DataFrame(data)
-        if df.empty:
+        # ✅ 檢查 API 狀態
+        if res.status_code != 200:
+            print(f"{stock_id} API失敗:", res.status_code)
             return None
-        # 日期
-        df["date"] = pd.to_datetime(df.get("date"), errors="coerce")
-        # ⭐ 安全抓現金股利
-        col = None
+        json_data = res.json()
+        data = json_data.get("data", [])
+        if not data:
+            print(f"{stock_id} 沒有股利資料")
+            return None
+        df = pd.DataFrame(data)
+        # ✅ 日期欄位安全處理
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        else:
+            df["date"] = None
+        # ✅ 現金股利欄位判斷
         if "CashEarningsDistribution" in df.columns:
             col = "CashEarningsDistribution"
         elif "CashDividendPayment" in df.columns:
             col = "CashDividendPayment"
-        if col:
-            df["cash_dividend"] = pd.to_numeric(df[col], errors="coerce")
         else:
-            print(f"{stock_id} 沒有現金股利欄位:", df.columns)
+            print(f"{stock_id} 沒有現金股利欄位:", df.columns.tolist())
             df["cash_dividend"] = None
+            return df
+        df["cash_dividend"] = pd.to_numeric(df[col], errors="coerce")
+        # ✅ 排序（常用）
+        df = df.sort_values("date", ascending=False)
         return df
     except Exception as e:
         print("股利錯誤:", stock_id, e)
