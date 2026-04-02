@@ -228,7 +228,7 @@ def process_stock(s):
             "chgPct": round(chgPct, 2),
             "amp": round(amp, 2),
             "eps_last": f"{last_eps}{eps_note}" if last_eps else "-",
-            "yield": yield_pct if yield_pct else "-",
+            "yield": yield_pct,
             "per": per if per else "-",
             "est_eps": est_eps if est_eps else "-",
 
