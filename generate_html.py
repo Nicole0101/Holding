@@ -44,25 +44,25 @@ def get_dividend(stock_id):
             "start_date": "2022-01-01",
             "token": FINMIND_TOKEN
         }
-
         res = requests.get(url, params=params)
         data = res.json().get("data", [])
-
         df = pd.DataFrame(data)
-
         if df.empty:
             return None
-
-        # ⭐ 確保 date 正確
-        df["date"] = pd.to_datetime(df["date"], errors="coerce")
-
-        # ⭐ 股利轉數值
-        df["CashDividendPayment"] = pd.to_numeric(
-            df["CashDividendPayment"], errors="coerce"
-        )
-
+        # 日期
+        df["date"] = pd.to_datetime(df.get("date"), errors="coerce")
+        # ⭐ 安全抓現金股利
+        col = None
+        if "CashEarningsDistribution" in df.columns:
+            col = "CashEarningsDistribution"
+        elif "CashDividendPayment" in df.columns:
+            col = "CashDividendPayment"
+        if col:
+            df["cash_dividend"] = pd.to_numeric(df[col], errors="coerce")
+        else:
+            print(f"{stock_id} 沒有現金股利欄位:", df.columns)
+            df["cash_dividend"] = None
         return df
-
     except Exception as e:
         print("股利錯誤:", stock_id, e)
         return None
