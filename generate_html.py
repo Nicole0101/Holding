@@ -143,19 +143,16 @@ def est_eps(stock_id):
 # 指標
 # =========================
 def add_indicators(df):
-
     # KD
     low_min = df["min"].rolling(9).min()
     high_max = df["max"].rolling(9).max()
     rsv = (df["close"] - low_min) / (high_max - low_min) * 100
-
     df["K"] = rsv.ewm(com=2).mean()
     df["D"] = df["K"].ewm(com=2).mean()
 
     # 布林
     ma20 = df["close"].rolling(20).mean()
     std = df["close"].rolling(20).std()
-
     df["BB_upper"] = ma20 + 2 * std
     df["BB_lower"] = ma20 - 2 * std
 
@@ -210,14 +207,22 @@ def process_stock(s):
 
         # ===== 殖利率 =====
         yield_pct = None
-        div_df = get_dividend(s["stock_id"])
-        if div_df is not None and not div_df.empty:
-            div_df = div_df.dropna(subset=["date", "CashDividendPayment"])
-            if not div_df.empty:
-                last_year = div_df["date"].dt.year.max()
-                year_div = div_df[div_df["date"].dt.year == last_year]["CashDividendPayment"].sum()
-                if latest["close"] > 0 and year_div > 0:
-                    yield_pct = round(year_div / latest["close"] * 100, 2)
+        dividend = get_dividend(s["stock_id"])
+        # 👉 沒資料
+        if dividend is None:
+            yield_pct = None
+        else:
+        # 👉 如果是 "3.5（累計2季）" 這種字串 → 取數字
+        if isinstance(dividend, str):
+            try:
+                dividend_value = float(dividend.split("（")[0])
+            except:
+                dividend_value = None
+        else:
+            dividend_value = dividend
+        # 👉 計算殖利率
+        if dividend_value and latest["close"] > 0:
+            yield_pct = round(dividend_value / latest["close"] * 100, 2)
 
         # ===== PER =====
         per = None
