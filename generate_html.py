@@ -84,9 +84,28 @@ def get_eps(stock_id):
 
     if df.empty:
         return None
-    df["date"] = pd.to_datetime(df["date"])
-    df = df[df["type"] == "EPS"]
-    return df.sort_values("date")
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df = df[df["type"] == "EPS"]
+        if df.empty:
+            return "-", None
+        # ⭐ 找去年
+        latest_year = df["date"].dt.year.max()
+        last_year = latest_year - 1
+        year_df = df[df["date"].dt.year == last_year]
+        if year_df.empty:
+            return "-", None
+        eps_sum = year_df["value"].sum()
+        quarters = len(year_df)
+        eps_sum = round(eps_sum, 2)
+        # ✅ 顯示格式
+        if quarters < 4:
+            eps_display = f"{eps_sum}({quarters})"
+        else:
+            eps_display = f"{eps_sum}"
+        return eps_display, eps_sum
+    except Exception as e:
+        print("EPS錯誤:", stock_id, e)
+        return "-", None
 
 # ================================================
 def est_eps(stock_id):
