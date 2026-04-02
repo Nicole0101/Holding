@@ -187,7 +187,7 @@ def process_stock(s):
 
         # ✅ 正確判斷條件（關鍵🔥）
         if last_div is not None and last_div > 0 and latest["close"] > 0:
-        yield_pct = round(last_div / latest["close"] * 100, 2)
+            yield_pct = round(last_div / latest["close"] * 100, 2)
 
         # ===== PER =====
         per = None
