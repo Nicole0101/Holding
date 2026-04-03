@@ -232,7 +232,11 @@ def process_stock(s):
             else:
                 dividend_value = dividend
 
-        if dividend_value and latest["close"] > 0:
+        if (
+            dividend_value is not None
+            and isinstance(dividend_value, (int, float))
+            and latest.get("close") not in (None, 0)
+        ):
             yield_pct = round(dividend_value / latest["close"] * 100, 2)
 
         # ===== PER =====
@@ -274,7 +278,7 @@ def process_stock(s):
             "chgPct": round(chgPct, 2),
             "amp": round(amp, 2),
             "eps_last": f"{last_eps}{eps_note}" if last_eps is not None else "-",
-            "yield": yield_pct,
+            "yield": f"{yield_pct}%" if yield_pct is not None else "-",
             "per": per if per else "-",
             "est_eps": est_eps if est_eps else "-",
 
