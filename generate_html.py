@@ -216,7 +216,7 @@ def process_stock(s):
                 try:
                     dividend_value = float(dividend.split("（")[0])
                 except:
-                dividend_value = None
+                    dividend_value = None
             else:
                 dividend_value = dividend
 
@@ -261,7 +261,7 @@ def process_stock(s):
             "chg": round(chg, 2),
             "chgPct": round(chgPct, 2),
             "amp": round(amp, 2),
-            "eps_last": f"{last_eps}{eps_note}" if last_eps is not None else "-"
+            "eps_last": f"{last_eps}{eps_note}" if last_eps is not None else "-",
             "yield": yield_pct,
             "per": per if per else "-",
             "est_eps": est_eps if est_eps else "-",
@@ -290,7 +290,6 @@ def process_stock(s):
 
 
 def main():
-
     import json
 
     # 讀股票清單
