@@ -92,8 +92,8 @@ def get_dividend(stock_id):
             return None
 
         total_div = df_target["cash_dividend"].sum()
-        print(df.head())
-        print(df.columns)
+        print("df.head():", df.head())
+        print("df.columns", df.columns)
         print("DIVIDEND", stock_id, latest_year, total_div)
         if total_div == 0:
             return None   # 👉 避免 0 誤判
