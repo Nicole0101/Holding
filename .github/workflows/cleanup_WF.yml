@@ -1,4 +1,4 @@
-name: Cleanup Reports
+name: Cleanup Reports(WF)
 
 on:
   workflow_dispatch:
