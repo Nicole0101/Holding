@@ -390,12 +390,18 @@ def main():
     user, repo_name = repo.split("/")
 
     now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
+
     filename = f"持股_{now}.html"
-    base_url = f"https://{user}.github.io/{repo_name}/"
-    if branch != "main":
-        file_url = f"https://github.com/{repo}/blob/{branch}/{filename}"
+
+    user = "nicole0101"
+    repo = "StockHolding-report"
+    #base_url = f"https://{user}.github.io/{repo}/"
+    #file_url = base_url + filename
+    if branch == "main":
+        file_url = f"https://{user}.github.io/{repo}/{filename}"
     else:
-        file_url = base_url + filename
+        file_url = f"https://github.com/{user}/{repo}/blob/{branch}/{filename}"
+
 
     with open(filename, "w", encoding="utf-8") as f:
         f.write(html)
