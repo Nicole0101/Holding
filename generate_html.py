@@ -96,9 +96,13 @@ def get_dividend(stock_id):
         if total_div == 0:
             return None   # 👉 避免 0 誤判
         return round(total_div, 2)
-
+    except Exception as e:
+        print(f"股利錯誤: {stock_id}", e)
+        return None
 
 # ======================
+
+
 def calculate_yield(stock_id, latest):
     dividend = get_dividend(stock_id)
     print("DIV", stock_id, dividend)
