@@ -1,8 +1,10 @@
+from FinMind.data import DataLoader
 import pandas as pd
 import requests
 from jinja2 import Template
 from datetime import datetime, timedelta
 import os
+
 
 FINMIND_TOKEN = os.getenv("FINMIND_TOKEN")
 
@@ -36,65 +38,30 @@ def get_stock_data(stock_id):
         print("抓資料錯誤:", stock_id, e)
         return None
 
+
 # ===============================================
-
-
 def get_dividend(stock_id):
     try:
-        url = "https://api.finmindtrade.com/api/v4/data"
-        params = {
-            "dataset": "TaiwanStockDividend",
-            "data_id": stock_id,
-            "start_date": "2022-01-01",
-            "token": FINMIND_TOKEN
-        }
-
-        res = requests.get(url, params=params)
-        if res.status_code != 200:
-            print(f"{stock_id} API失敗:", res.status_code)
+        dl = DataLoader()
+        df = dl.taiwan_stock_dividend_policy(stock_id=stock_id)
+        if df is None or df.empty:
             return None
-
-        data = res.json().get("data", [])
-        if not data:
-            return None
-
-        df = pd.DataFrame(data)
-
-        print("欄位:", df.columns)
-
-        # ✅ 抓兩個現金股利來源
-        cash_cols = []
-
-        if "CashEarningsDistribution" in df.columns:
-            cash_cols.append("CashEarningsDistribution")
-
-        if "CashStatutorySurplus" in df.columns:
-            cash_cols.append("CashStatutorySurplus")
-
-        if not cash_cols:
-            print("❌ 沒有現金股利欄位", stock_id)
-            return None
-
-        # ✅ 合併股利
-        df["cash_dividend"] = df[cash_cols].apply(
-            pd.to_numeric, errors="coerce"
-        ).sum(axis=1)
-
+        # 確保型別
         df["year"] = pd.to_numeric(df["year"], errors="coerce")
+        df["cash_dividend"] = pd.to_numeric(
+            df["cash_dividend"], errors="coerce")
+        df = df.dropna(subset=["year", "cash_dividend"])
 
-        df = df.dropna(subset=["year"])
-
+        if df.empty:
+            return None
         # 🔥 抓最近有配息的
         df = df.sort_values("year", ascending=False)
-
         for _, row in df.iterrows():
-            if pd.notna(row["cash_dividend"]) and row["cash_dividend"] > 0:
+            if row["cash_dividend"] > 0:
                 print("DIVIDEND抓到:", stock_id,
                       row["year"], row["cash_dividend"])
                 return round(row["cash_dividend"], 2)
-
         return None
-
     except Exception as e:
         print(f"股利錯誤: {stock_id}", e)
         return None
