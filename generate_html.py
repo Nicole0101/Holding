@@ -9,6 +9,8 @@ FINMIND_TOKEN = os.getenv("FINMIND_TOKEN")
 # =========================
 # 抓股價
 # =========================
+
+
 def get_stock_data(stock_id):
     try:
         url = "https://api.finmindtrade.com/api/v4/data"
@@ -35,6 +37,8 @@ def get_stock_data(stock_id):
         return None
 
 # ===============================================
+
+
 def get_dividend(stock_id):
     try:
         url = "https://api.finmindtrade.com/api/v4/data"
@@ -101,13 +105,15 @@ def get_dividend(stock_id):
         if count >= 4:
             return round(total_div, 2)
         else:
-            return f"{round(total_div,2)}（累計{count}季）"
+            return f"{round(total_div, 2)}（累計{count}季）"
 
     except Exception as e:
         print(f"股利錯誤: {stock_id}", e)
         return None
 
 # ===============================================
+
+
 def get_eps(stock_id):
     url = "https://api.finmindtrade.com/api/v4/data"
     params = {
@@ -127,6 +133,8 @@ def get_eps(stock_id):
     return df.sort_values("date")
 
 # ================================================
+
+
 def est_eps(stock_id):
     api = DataLoader()
     eps_df = api.taiwan_stock_eps(stock_id=stock_id)
@@ -142,6 +150,8 @@ def est_eps(stock_id):
 # =========================
 # 指標
 # =========================
+
+
 def add_indicators(df):
     # KD
     low_min = df["min"].rolling(9).min()
@@ -161,6 +171,8 @@ def add_indicators(df):
 # =========================
 # 距離（你指定版本）
 # =========================
+
+
 def calc_dist(price, ma):
     if ma == 0 or pd.isna(ma):
         return None
@@ -169,6 +181,8 @@ def calc_dist(price, ma):
 # =========================
 # 單股處理🔥
 # =========================
+
+
 def process_stock(s):
     try:
         df = get_stock_data(str(s["stock_id"]))
@@ -188,39 +202,24 @@ def process_stock(s):
         amp = ((latest["max"] - latest["min"]) / prev["close"]) * 100
 
         # ===== EPS =====
-        eps_df = get_eps(s["stock_id"])
-        last_eps = None
+        last_eps = get_eps(s["stock_id"])
         eps_note = ""
         quarters = 0
-
-        if eps_df is not None and not eps_df.empty:
-            latest_year = eps_df["date"].dt.year.max()
-            year_df = eps_df[eps_df["date"].dt.year == latest_year]
-
-            eps_sum = year_df["value"].sum()
-            quarters = len(year_df)
-
-            last_eps = round(eps_sum, 2)
-
-            if quarters < 4:
-                eps_note = f"({quarters})"
 
         # ===== 殖利率 =====
         yield_pct = None
         dividend = get_dividend(s["stock_id"])
-        # 👉 沒資料
-        if dividend is None:
-            yield_pct = None
-        else:
-        # 👉 如果是 "3.5（累計2季）" 這種字串 → 取數字
-        if isinstance(dividend, str):
-            try:
-                dividend_value = float(dividend.split("（")[0])
-            except:
+        dividend_value = None
+
+        if dividend is not None:
+            if isinstance(dividend, str):
+                try:
+                    dividend_value = float(dividend.split("（")[0])
+                except:
                 dividend_value = None
-        else:
-            dividend_value = dividend
-        # 👉 計算殖利率
+            else:
+                dividend_value = dividend
+
         if dividend_value and latest["close"] > 0:
             yield_pct = round(dividend_value / latest["close"] * 100, 2)
 
@@ -262,7 +261,7 @@ def process_stock(s):
             "chg": round(chg, 2),
             "chgPct": round(chgPct, 2),
             "amp": round(amp, 2),
-            "eps_last": f"{last_eps}{eps_note}" if last_eps else "-",
+            "eps_last": f"{last_eps}{eps_note}" if last_eps is not None else "-"
             "yield": yield_pct,
             "per": per if per else "-",
             "est_eps": est_eps if est_eps else "-",
@@ -288,6 +287,8 @@ def process_stock(s):
 # =========================
 # 主程式🔥
 # =========================
+
+
 def main():
 
     import json
@@ -323,8 +324,10 @@ def main():
     top_names = ", ".join([s["name"] for s in sorted_stocks[:5]])
     weak_names = ", ".join([s["name"] for s in sorted_stocks[-5:]])
 
-    rebound_list = [s["name"] for s in results if "反彈" in s.get("strategy", "")]
-    selloff_list = [s["name"] for s in results if "出貨" in s.get("strategy", "")]
+    rebound_list = [s["name"]
+                    for s in results if "反彈" in s.get("strategy", "")]
+    selloff_list = [s["name"]
+                    for s in results if "出貨" in s.get("strategy", "")]
 
     # HTML
     with open("template.html", "r", encoding="utf-8") as f:
@@ -348,19 +351,6 @@ def main():
         f.write(html)
 
     print("輸出:", filename)
-         
-
-    # HTML
-    with open("template.html", "r", encoding="utf-8") as f:
-        template = Template(f.read())
-
-    html = template.render(
-        stocks=sorted_stocks,
-        top_stocks=top_names,
-        weak_stocks=weak_names,
-        rebound_list=", ".join(rebound_list[:5]),
-        selloff_list=", ".join(selloff_list[:5])
-    )
 
     now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
     filename = f"持股_{now}.html"
