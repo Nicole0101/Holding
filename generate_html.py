@@ -115,6 +115,52 @@ def get_dividend(stock_id):
 
 
 def get_eps(stock_id):
+    try:
+        url = "https://api.finmindtrade.com/api/v4/data"
+        params = {
+            "dataset": "TaiwanStockFinancialStatements",
+            "data_id": stock_id,
+            "start_date": "2023-01-01",
+            "token": FINMIND_TOKEN
+        }
+
+        data = requests.get(url, params=params).json().get("data", [])
+        if not data:
+            return None
+
+        df = pd.DataFrame(data)
+        df = df[df["type"] == "EPS"]
+
+        if df.empty:
+            return None
+
+        df["date"] = pd.to_datetime(df["date"])
+        df["year"] = df["date"].dt.year
+        df["season"] = df["date"].dt.quarter
+        df["value"] = pd.to_numeric(df["value"], errors="coerce")
+
+        last_year = datetime.now().year - 1
+        df = df[df["year"] == last_year]
+
+        if df.empty:
+            return None
+
+        # 👉 優先 Q4（最準）
+        q4 = df[df["season"] == 4]
+        if not q4.empty:
+            return round(q4.sort_values("date")["value"].iloc[-1], 2)
+
+        # 👉 fallback
+        df = df.sort_values("date").drop_duplicates("season", keep="last")
+        if len(df) >= 4:
+            return round(df["value"].sum(), 2)
+
+        return None
+
+    except Exception as e:
+        print("EPS錯誤:", stock_id, e)
+        return None
+
     url = "https://api.finmindtrade.com/api/v4/data"
     params = {
         "dataset": "TaiwanStockFinancialStatements",
