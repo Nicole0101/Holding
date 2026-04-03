@@ -94,11 +94,12 @@ def get_dividend(stock_id):
         total_div = df_target["cash_dividend"].sum()
 
         return round(total_div, 2)
+        print(stock_id, total_div)
 
     except Exception as e:
         print(f"股利錯誤: {stock_id}", e)
         return None
-    print(stock_id, total_div)
+
 # ======================
 
 
