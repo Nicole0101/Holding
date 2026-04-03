@@ -92,6 +92,8 @@ def get_dividend(stock_id):
             return None
 
         total_div = df_target["cash_dividend"].sum()
+        print(df.head())
+        print(df.columns)
         print("DIVIDEND", stock_id, latest_year, total_div)
         if total_div == 0:
             return None   # 👉 避免 0 誤判
@@ -118,7 +120,6 @@ def calculate_yield(stock_id, latest):
         print("CLOSE為0", stock_id)
         return None
     yield_pct = round(dividend / close_price * 100, 2)
-    print("YIELD", stock_id, yield_pct)
     return yield_pct
 
 # ===============================================
