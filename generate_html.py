@@ -60,14 +60,9 @@ def get_dividend(stock_id):
 
         df = pd.DataFrame(data)
 
-        # 日期
-        # 錯誤df["date"] = pd.to_datetime(df.get("date"), errors="coerce")
-        # 錯誤df = df.dropna(subset=["date"])
-
         if "year" not in df.columns:
             return None
 
-        # 欄位判斷
         if "CashEarningsDistribution" in df.columns:
             col = "CashEarningsDistribution"
         elif "CashDividendPayment" in df.columns:
@@ -76,39 +71,36 @@ def get_dividend(stock_id):
             return None
 
         df["cash_dividend"] = pd.to_numeric(df[col], errors="coerce")
-        df = df.dropna(subset=["cash_dividend"])
+        df["year"] = pd.to_numeric(df["year"], errors="coerce")
+
+        df = df.dropna(subset=["cash_dividend", "year"])
 
         if df.empty:
             return None
 
-        # 轉 int
-        df["year"] = pd.to_numeric(df["year"], errors="coerce")
-        df = df.dropna(subset=["year"])
+        # 用最新已公告年度
+        latest_year = int(df["year"].max())
         current_year = datetime.now().year
 
-        # 直接抓「去年股利」（最準）
-        target_year = current_year - 1
-        df_target = df[df["year"] == target_year]
-        # 如果去年沒有 → 抓最新年度
-        if df_target.empty:
-            latest_year = df["year"].max()
-            df_target = df[df["year"] == latest_year]
+        # 避免抓到未完成年度
+        if latest_year >= current_year:
+            latest_year = current_year - 1
+
+        df_target = df[df["year"] == latest_year]
 
         if df_target.empty:
             return None
+
         total_div = df_target["cash_dividend"].sum()
-        count = df_target["cash_dividend"].count()
-        if count == 0:
-            return None
-        # 台股通常一年1次，不用再判斷4季
+
         return round(total_div, 2)
 
     except Exception as e:
         print(f"股利錯誤: {stock_id}", e)
         return None
+
+
 # ===============================================
-
-
 def get_eps(stock_id):
     try:
         url = "https://api.finmindtrade.com/api/v4/data"
@@ -140,42 +132,30 @@ def get_eps(stock_id):
         if df.empty:
             return None
 
-        # 👉 優先 Q4（最準）
-        q4 = df[df["season"] == 4]
-        if not q4.empty:
-            return round(q4.sort_values("date")["value"].iloc[-1], 2)
+        # 去重（避免同一季多筆）
+        df = df.sort_values("date").drop_duplicates(
+            ["year", "season"], keep="last")
 
-        # 👉 fallback
-        df = df.sort_values("date").drop_duplicates("season", keep="last")
-        if len(df) >= 4:
+        # ===== 正確邏輯 =====
+        # 1. 有四季 → 用加總（最準）
+        if df["season"].nunique() >= 4:
             return round(df["value"].sum(), 2)
 
+        # 2. fallback：只有Q4（有些公司會累計）
+        q4 = df[df["season"] == 4]
+        if not q4.empty:
+            val = q4.sort_values("date")["value"].iloc[-1]
+            # 保護：避免把單季當全年（例如 < 4 通常是單季）
+            if val > 4:  # 可依需求調整
+                return round(val, 2)
         return None
 
     except Exception as e:
         print("EPS錯誤:", stock_id, e)
         return None
 
-    url = "https://api.finmindtrade.com/api/v4/data"
-    params = {
-        "dataset": "TaiwanStockFinancialStatements",
-        "data_id": stock_id,
-        "start_date": "2022-01-01",
-        "token": FINMIND_TOKEN
-    }
-    res = requests.get(url, params=params)
-    data = res.json().get("data", [])
-    df = pd.DataFrame(data)
-    if df.empty:
-        return None
-    # ✅ 正確縮排（和 if 同層）
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df[df["type"] == "EPS"]
-    return df.sort_values("date")
 
 # ================================================
-
-
 def est_eps(stock_id):
     api = DataLoader()
     eps_df = api.taiwan_stock_eps(stock_id=stock_id)
@@ -188,11 +168,8 @@ def est_eps(stock_id):
     estimated_eps = ttm_eps * (1 + growth)
     return round(ttm_eps, 2), round(estimated_eps, 2)
 
-# =========================
-# 指標
-# =========================
 
-
+# 指標=========================
 def add_indicators(df):
     # KD
     low_min = df["min"].rolling(9).min()
@@ -206,12 +183,9 @@ def add_indicators(df):
     std = df["close"].rolling(20).std()
     df["BB_upper"] = ma20 + 2 * std
     df["BB_lower"] = ma20 - 2 * std
-
     return df
 
-# =========================
-# 距離（你指定版本）
-# =========================
+# 距離（你指定版本）=========================
 
 
 def calc_dist(price, ma):
@@ -219,11 +193,8 @@ def calc_dist(price, ma):
         return None
     return round((price - ma) / ma * 100, 2)
 
-# =========================
-# 單股處理🔥
-# =========================
 
-
+# 單股處理=========================
 def process_stock(s):
     try:
         df = get_stock_data(str(s["stock_id"]))
