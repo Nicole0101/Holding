@@ -425,7 +425,8 @@ def main():
 ⚠ 弱勢股
 {chr(10).join(weak5)}
 
-📎 https://nicole0101.github.io/StockHolding-report/持股_{now}.html
+📎 url = f"https://nicole0101.github.io/StockHolding-report/{filename}"
+    {url}
 📎 https://nicole0101.github.io/<repo>/持股_{now}.html
 """
 
