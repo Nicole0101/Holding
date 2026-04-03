@@ -10,19 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ✅ 刪除 HTML 報表（你原本的）
-      - name: Delete old reports
-        run: rm 持股_*.html || true
-
-      # ✅ Commit
-      - name: Commit
-        run: |
-          git config --global user.name "bot"
-          git config --global user.email "bot@github.com"
-          git add .
-          git commit -m "cleanup reports" || echo "no changes"
-          git push
-
       # ✅ 新增：刪除 10 分鐘前的 workflow runs
       - name: Delete old workflow runs
         env:
