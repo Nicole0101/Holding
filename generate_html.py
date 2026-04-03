@@ -392,7 +392,10 @@ def main():
     now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
     filename = f"持股_{now}.html"
     base_url = f"https://{user}.github.io/{repo_name}/"
-    file_url = base_url + filename
+    if branch != "main":
+        file_url = f"https://github.com/{repo}/blob/{branch}/{filename}"
+    else:
+        file_url = base_url + filename
 
     with open(filename, "w", encoding="utf-8") as f:
         f.write(html)
