@@ -385,9 +385,14 @@ def main():
         rebound_list=", ".join(rebound_list[:5]),
         selloff_list=", ".join(selloff_list[:5])
     )
+    repo = os.getenv("GITHUB_REPOSITORY", "nicole0101/StockHolding-report")
+    branch = os.getenv("GITHUB_REF_NAME", "main")
+    user, repo_name = repo.split("/")
 
     now = (datetime.utcnow() + timedelta(hours=8)).strftime("%m%d%H%M")
     filename = f"持股_{now}.html"
+    base_url = f"https://{user}.github.io/{repo_name}/"
+    file_url = base_url + filename
 
     with open(filename, "w", encoding="utf-8") as f:
         f.write(html)
@@ -424,10 +429,9 @@ def main():
 
 ⚠ 弱勢股
 {chr(10).join(weak5)}
+📎 {file_url}
 
-📎 url = f"https://nicole0101.github.io/StockHolding-report/{filename}"
-    {url}
-📎 https://nicole0101.github.io/<repo>/持股_{now}.html
+📎 https://nicole0101.github.io/StockHolding-report/{filename}
 """
 
         send_line(msg.strip())
