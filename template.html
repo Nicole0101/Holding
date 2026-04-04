@@ -25,7 +25,7 @@ table {
   border-collapse: separate; /* 重要：使用 separate 避免 sticky 邊框異常 */
   border-spacing: 0;         /* 消除間隙 */
   min-width: 1200px;
-}
+  }
 
 /* 1. 固定第一行 (thead th) */
 thead th {
@@ -34,7 +34,6 @@ thead th {
   background: #1c2330;  /* 維持深色背景 */
   z-index: 10;          /* 層級高於普通 td */
   border-bottom: 2px solid #30363d;
-  font-size: 12px
 }
 
 /* 2. 固定第一列 (名稱欄位) */
@@ -46,7 +45,7 @@ tbody td:first-child {
   background: #1c2330;  /* 必須設定背景色，否則捲動會透明 */
   z-index: 11;          /* 層級高於一般 th */
   border-right: 1px solid #30363d;
-  font-size: 11px
+  font-size: 12px
 }
 
 /* 3. 左上角交集處 (名稱標題) */
@@ -80,7 +79,7 @@ td, th {
 
 /* 訊號 */
 /*.sig { padding:3px 8px; border-radius:4px; font-size:11px; }*/
-.sig { display: inline-block;width: 45px; text-align: center; padding: 3px 2px;  border-radius: 4px; font-size: 11px;}
+.sig { display: inline-block;width: 45px; text-align: center; padding: 3px 2px;  border-radius: 4px; }
 .sig-buy { background:#3fb95033; color:#3fb950; }
 .sig-sell { background:#f8514933; color:#f85149; }
 .sig-hold { background:#8b949e33; color:#8b949e; }
