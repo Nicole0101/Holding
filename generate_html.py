@@ -319,7 +319,7 @@ def process_stock(s):
             strategy = "觀察"
 
         return {
-            "name": s["name"],
+            "name": s["name"][:3],
             "code": s["stock_id"],
             "price": round(latest["close"], 2),
             "chg": round(chg, 2),
