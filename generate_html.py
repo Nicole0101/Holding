@@ -3,8 +3,6 @@ import requests
 from jinja2 import Template
 from datetime import datetime, timedelta
 import os
-
-
 FINMIND_TOKEN = os.getenv("FINMIND_TOKEN")
 
 # =========================
@@ -95,9 +93,9 @@ def get_dividend(stock_id):
     except Exception as e:
         print(f"股利錯誤: {stock_id}", e)
         return None
+
+
 # ======================
-
-
 def get_yield(stock_id):
     try:
         url = "https://api.finmindtrade.com/api/v4/data"
@@ -123,9 +121,8 @@ def get_yield(stock_id):
         print(f"殖利率錯誤: {stock_id}", e)
         return None
 
+
 # ===============================================
-
-
 def get_eps(stock_id):
     try:
         url = "https://api.finmindtrade.com/api/v4/data"
@@ -156,16 +153,13 @@ def get_eps(stock_id):
 
         if df.empty:
             return None
-
         # 去重（避免同一季多筆）
         df = df.sort_values("date").drop_duplicates(
             ["year", "season"], keep="last")
-
         # ===== 正確邏輯 =====
         # 1. 有四季 → 用加總（最準）
         if df["season"].nunique() >= 4:
             return round(df["value"].sum(), 2)
-
         # 2. fallback：只有Q4（有些公司會累計）
         q4 = df[df["season"] == 4]
         if not q4.empty:
@@ -211,6 +205,8 @@ def add_indicators(df):
     return df
 
 # 距離（你指定版本）=========================
+
+
 def calc_dist(price, ma):
     if ma == 0 or pd.isna(ma):
         return None
@@ -223,9 +219,7 @@ def process_stock(s):
         df = get_stock_data(str(s["stock_id"]))
         if df is None or len(df) < 60:
             return None
-
         df = add_indicators(df)
-
         latest = df.iloc[-1]
         prev = df.iloc[-2]
 
@@ -260,10 +254,12 @@ def process_stock(s):
         ma6 = df["close"].rolling(6).mean().iloc[-1]
         ma18 = df["close"].rolling(18).mean().iloc[-1]
         ma50 = df["close"].rolling(50).mean().iloc[-1]
+        print("ma6 ", ma6, "ma18 ", ma18, "ma50 ", ma50)
 
         dist6 = calc_dist(latest["close"], ma6)
         dist18 = calc_dist(latest["close"], ma18)
         dist50 = calc_dist(latest["close"], ma50)
+        print("dist6 ", dist6, "dist18 ", dist18, "dist50 ", dist50)
 
         k = latest["K"]
         d = latest["D"]
