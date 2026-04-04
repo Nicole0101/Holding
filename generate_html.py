@@ -6,11 +6,9 @@ import os
 from FinMind.data import DataLoader
 FINMIND_TOKEN = os.getenv("FINMIND_TOKEN")
 
-# =========================
-# 抓股價
-# =========================
 
 api = DataLoader()
+# 抓股價=========================
 
 
 def get_stock_data(stock_id):
@@ -110,10 +108,12 @@ def get_profit_ratio(stock_id):
         latest = df.groupby("type").last()["value"]
 
         revenue = latest.get("Revenue", None)
-        gross = latest.get("GrossProfit", None)
+        gross = latest.get("GrossProfit", None)  # 營業毛利（毛損）淨額
         operating = latest.get("OperatingIncome", None)
-        net = latest.get("NetIncome", None)
-        print("df: ", df, "net; ", net)
+        # net = latest.get("NetIncome", None)
+        net = latest.get("IncomeAfterTaxes", None)  # 本期淨利（淨損）
+        print("df.header ", df.header)
+        print("net; ", net)
         if revenue and revenue != 0:
             gross_margin = round(gross / revenue * 100, 2) if gross else None
             op_margin = round(operating / revenue * 100,
