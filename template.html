@@ -9,85 +9,57 @@
 body { background:#0d1117; color:#e6edf3; font-family:Arial; }
 .container { max-width:1400px; margin:auto; padding:20px; }
 
-/* 修正容器：確保 sticky 有效，並限制高度產生垂直捲軸 */
 .card { 
   background:#161b22; 
   border:1px solid #30363d; 
   border-radius:10px; 
   padding:15px; 
-  margin-bottom:15px;
-  overflow: auto;      /* 必須為 auto 或 scroll */
-  max-height: 600px;   /* 設定最大高度，才會觸發第一行固定 */
+  overflow:auto;
+  max-height:600px;
 }
 
 table { 
   width:100%; 
-  border-collapse: separate; /* 重要：使用 separate 避免 sticky 邊框異常 */
-  border-spacing: 0;         /* 消除間隙 */
-  min-width: 1200px;
-  font-size: 11.5px;
-  }
-
-/* 1. 固定第一行 (thead th) */
-thead th {
-  position: sticky;
-  top: 0;
-  background: #1c2330;  /* 維持深色背景 */
-  z-index: 10;          /* 層級高於普通 td */
-  border-bottom: 2px solid #30363d;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:1000px;
+  font-size:12px;
 }
 
-/* 2. 固定第一列 (名稱欄位) */
-/* 同時針對 thead 的第一個 th 與 tbody 的第一個 td */
+thead th {
+  position:sticky;
+  top:0;
+  background:#1c2330;
+  z-index:10;
+}
+
 thead th:first-child,
 tbody td:first-child {
-  position: sticky;
-  left: 0;
-  background: #1c2330;  /* 必須設定背景色，否則捲動會透明 */
-  z-index: 11;          /* 層級高於一般 th */
-  border-right: 1px solid #30363d;
-  font-size: 12px
+  position:sticky;
+  left:0;
+  background:#1c2330;
+  z-index:11;
 }
 
-/* 3. 左上角交集處 (名稱標題) */
-/* 這是最關鍵的一格，必須同時固定 top 與 left */
-thead th:first-child {
-  top: 0;
-  left: 0;
-  z-index: 12;          /* 最高層級，確保不被覆蓋 */
-  background: #1c2330;
+th, td {
+  padding:8px;
+  border-bottom:1px solid #30363d;
+  border-right:1px solid #30363d;
 }
-
-/* 修正 td 邊框，因為使用了 border-separate */
-td, th {
-  padding: 10px;
-  border-bottom: 1px solid #30363d;
-  border-right: 1px solid #30363d; /* 增加右邊框增加辨識度 */
-}  
 
 .name { text-align:left; font-weight:bold; }
 
 .up { color:#f85149; }
 .dn { color:#3fb950; }
 
-/* KD */
 .kd-bar { width:80px; height:6px; background:#222; border-radius:3px; margin:auto; position:relative; }
 .kd-dot { width:8px; height:8px; border-radius:50%; position:absolute; top:-1px; transform:translateX(-50%); }
 
-/* BB */
 .bb-bar { width:80px; height:6px; background:#222; border-radius:3px; margin:auto; position:relative; }
 .bb-dot { width:6px; height:10px; position:absolute; top:-2px; transform:translateX(-50%); }
 
-/* 訊號 */
-.sig { display: inline-block;width: 45px; text-align: center; padding: 3px 2px;  border-radius: 4px; }
-.sig-buy { background:#3fb95033; color:#3fb950; }
-.sig-sell { background:#f8514933; color:#f85149; }
-.sig-hold { background:#8b949e33; color:#8b949e; }
-.sig-watch { background:#d2992233; color:#d29922; }
-
-/* summary */
 .summary { display:flex; gap:10px; margin-bottom:10px; }
-.box { flex:1; padding:10px; border-radius:8px; text-align:center;flex-wrap: wrap }
+.box { flex:1; padding:10px; border-radius:8px; text-align:center; }
 .buy { background:#3fb95022; }
 .sell { background:#f8514922; }
 .watch { background:#d2992222; }
@@ -99,17 +71,15 @@ td, th {
 
 <div class="container">
 
-<h2>📊 (持股)技術分析報告</h2>
+<h2>📊 台股技術分析報告</h2>
 
-<!-- 訊號統計 -->
 <div class="summary">
-  <div class="box buy"><b id="buyCount"></b><br>買進</div>
-  <div class="box sell"><b id="sellCount"></b><br>賣出</div>
+  <div class="box buy"><b id="buyCount"></b><br>反彈</div>
+  <div class="box sell"><b id="sellCount"></b><br>出貨</div>
   <div class="box watch"><b id="watchCount"></b><br>觀察</div>
-  <div class="box hold"><b id="holdCount"></b><br>中立</div>
+  <div class="box hold"><b id="holdCount"></b><br>整理</div>
 </div>
 
-<!-- 表格 -->
 <div class="card">
 <table>
 <thead>
@@ -117,22 +87,14 @@ td, th {
 <th>名稱</th>
 <th>代碼</th>
 <th>價格</th>
-<th>漲跌</th>
 <th>漲跌%</th>
 <th>震幅%</th>
-<th>去年EPS</th>
 <th>毛利率</th>
-<th>營益率</th>
 <th>淨利率</th>
-<th>殖利率</th>
-<th>PER</th>
-<th>Est.EPS</th>
+<th>TTM EPS</th>
+<th>預估EPS</th>
 <th>KD</th>
 <th>布林</th>
-<th>Bias6</th>
-<th>Bias18</th>
-<th>Bias50</th>
-<th>訊號</th>
 <th>策略</th>
 </tr>
 </thead>
@@ -147,70 +109,61 @@ const stocks = {{ stocks | tojson }};
 </script>
 
 <script>
-const sigLabel = { buy:"買進", sell:"賣出", hold:"中立", watch:"觀察" };
-const sigClass = { buy:"sig-buy", sell:"sig-sell", hold:"sig-hold", watch:"sig-watch" };
-
 function kdColor(k){
-  if(k>70) return "#f85149";
-  if(k<30) return "#3fb950";
+  if(k > 70) return "#f85149";
+  if(k < 30) return "#3fb950";
   return "#d29922";
 }
 
 function bbPosition(bb){
+  if(!bb) return 50;
   if(bb.includes("上")) return 80;
   if(bb.includes("下")) return 20;
   return 50;
 }
 
-function distClass(v){
-  if(v == null) return "";
-  return v >= 0 ? "up" : "dn";
-}
-
 function renderRow(s){
 
-  const chgClass = s.chg >= 0 ? "up":"dn";
-  const chgSign = s.chg >= 0 ? "+" : "";
+  const chgClass = s.chgPct >= 0 ? "up":"dn";
+  const chgSign = s.chgPct >= 0 ? "+" : "";
 
   return `
   <tr>
     <td class="name">${s.name}</td>
     <td>${s.code}</td>
-    <td>${s.price}</td>
+    <td>${s.price ?? "-"}</td>
 
-    <td class="${chgClass}">${chgSign}${s.chg}</td>
-    <td class="${chgClass}">${chgSign}${s.chgPct}%</td>
+    <td class="${chgClass}">
+      ${chgSign}${s.chgPct ?? 0}%
+    </td>
 
-    <td>${s.amp ?? 0}%</td>
-    
-    <td>${s.eps_last ?? "-"}</td>
-    <td class="${distClass(s.gross_margin)}">${s.gross_margin ?? ""}%</td>
-    <td class="${distClass(s.op_margin)}">${s.op_margin ?? ""}%</td>
-    <td class="${distClass(s.net_margin)}">${s.net_margin ?? ""}%</td>
-    <td>${s.yield != null ? s.yield + "%" : "-"}</td>
-    <td>${s.per ?? "-"}</td>
+    <td>${s.amp ?? "-"}%</td>
+
+    <td>${s.gross_margin ?? "-"}%</td>
+    <td>${s.net_margin ?? "-"}%</td>
+
+    <td>${s.ttm_eps ?? "-"}</td>
     <td>${s.est_eps ?? "-"}</td>
-        <td>
-      ${s.k}/${s.d}
+
+    <td>
+      ${s.k ?? "-"}
       <div class="kd-bar">
-        <div class="kd-dot" style="left:${s.k}%; background:${kdColor(s.k)}"></div>
+        <div class="kd-dot"
+          style="left:${s.k ?? 50}%; background:${kdColor(s.k ?? 50)}">
+        </div>
       </div>
     </td>
 
     <td>
-      ${s.bb}
+      ${s.bb ?? "-"}
       <div class="bb-bar">
-        <div class="bb-dot" style="left:${bbPosition(s.bb)}%; background:#58a6ff"></div>
+        <div class="bb-dot"
+          style="left:${bbPosition(s.bb)}%; background:#58a6ff">
+        </div>
       </div>
     </td>
 
-    <!-- 乖離率 -->
-    <td class="${distClass(s.bias6)}">${s.bias6 ?? ""}%</td>
-    <td class="${distClass(s.bias18)}">${s.bias18 ?? ""}%</td>
-    <td class="${distClass(s.bias50)}">${s.bias50 ?? ""}%</td>
-
-    <td><span class="sig ${sigClass[s.sig]}">${sigLabel[s.sig]}</span></td>
-    <td>${s.strategy}</td>
+    <td>${s.strategy ?? "-"}</td>
   </tr>
   `;
 }
@@ -218,14 +171,15 @@ function renderRow(s){
 document.getElementById("stockBody").innerHTML =
   stocks.map(renderRow).join("");
 
-// 統計
-const buys = stocks.filter(s=>s.sig==='buy').length;
-const sells = stocks.filter(s=>s.sig==='sell').length;
-const watch = stocks.filter(s=>s.sig==='watch').length;
-const hold = stocks.filter(s=>s.sig==='hold').length;
 
-document.getElementById("buyCount").innerText = buys;
-document.getElementById("sellCount").innerText = sells;
+// ===== 統計（改用 strategy）=====
+const rebound = stocks.filter(s => s.strategy?.includes("反彈")).length;
+const sell = stocks.filter(s => s.strategy?.includes("出貨")).length;
+const watch = stocks.filter(s => s.strategy === "觀察").length;
+const hold = stocks.filter(s => s.strategy === "整理").length;
+
+document.getElementById("buyCount").innerText = rebound;
+document.getElementById("sellCount").innerText = sell;
 document.getElementById("watchCount").innerText = watch;
 document.getElementById("holdCount").innerText = hold;
 </script>
