@@ -3,62 +3,95 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>策略型台股 Dashboard</title>
+<title>台股技術分析報告</title>
 
 <style>
 body { background:#0d1117; color:#e6edf3; font-family:Arial; }
 .container { max-width:1400px; margin:auto; padding:20px; }
 
-.card {
-  background:#161b22;
-  border:1px solid #30363d;
-  border-radius:10px;
-  padding:15px;
+/* 修正容器：確保 sticky 有效，並限制高度產生垂直捲軸 */
+.card { 
+  background:#161b22; 
+  border:1px solid #30363d; 
+  border-radius:10px; 
+  padding:15px; 
   margin-bottom:15px;
-  overflow:auto;
-  max-height:600px;
+  overflow: auto;      /* 必須為 auto 或 scroll */
+  max-height: 600px;   /* 設定最大高度，才會觸發第一行固定 */
 }
 
-table {
-  width:100%;
-  border-collapse:separate;
-  border-spacing:0;
-  min-width:1200px;
-  font-size:12px;
-}
+table { 
+  width:100%; 
+  border-collapse: separate; /* 重要：使用 separate 避免 sticky 邊框異常 */
+  border-spacing: 0;         /* 消除間隙 */
+  min-width: 1200px;
+  font-size: 11.5px;
+  }
 
-th { cursor:pointer; }
-
+/* 1. 固定第一行 (thead th) */
 thead th {
-  position:sticky;
-  top:0;
-  background:#1c2330;
-  z-index:10;
+  position: sticky;
+  top: 0;
+  background: #1c2330;  /* 維持深色背景 */
+  z-index: 10;          /* 層級高於普通 td */
+  border-bottom: 2px solid #30363d;
 }
 
+/* 2. 固定第一列 (名稱欄位) */
+/* 同時針對 thead 的第一個 th 與 tbody 的第一個 td */
 thead th:first-child,
 tbody td:first-child {
-  position:sticky;
-  left:0;
-  background:#1c2330;
-  z-index:11;
+  position: sticky;
+  left: 0;
+  background: #1c2330;  /* 必須設定背景色，否則捲動會透明 */
+  z-index: 11;          /* 層級高於一般 th */
+  border-right: 1px solid #30363d;
+  font-size: 12px
 }
 
-td, th {
-  padding:10px;
-  border-bottom:1px solid #30363d;
-  border-right:1px solid #30363d;
+/* 3. 左上角交集處 (名稱標題) */
+/* 這是最關鍵的一格，必須同時固定 top 與 left */
+thead th:first-child {
+  top: 0;
+  left: 0;
+  z-index: 12;          /* 最高層級，確保不被覆蓋 */
+  background: #1c2330;
 }
+
+/* 修正 td 邊框，因為使用了 border-separate */
+td, th {
+  padding: 10px;
+  border-bottom: 1px solid #30363d;
+  border-right: 1px solid #30363d; /* 增加右邊框增加辨識度 */
+}  
+
+.name { text-align:left; font-weight:bold; }
 
 .up { color:#f85149; }
 .dn { color:#3fb950; }
 
-.top { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
-.pick {
-  padding:10px;
-  border:1px solid #30363d;
-  border-radius:6px;
-}
+/* KD */
+.kd-bar { width:80px; height:6px; background:#222; border-radius:3px; margin:auto; position:relative; }
+.kd-dot { width:8px; height:8px; border-radius:50%; position:absolute; top:-1px; transform:translateX(-50%); }
+
+/* BB */
+.bb-bar { width:80px; height:6px; background:#222; border-radius:3px; margin:auto; position:relative; }
+.bb-dot { width:6px; height:10px; position:absolute; top:-2px; transform:translateX(-50%); }
+
+/* 訊號 */
+.sig { display: inline-block;width: 45px; text-align: center; padding: 3px 2px;  border-radius: 4px; }
+.sig-buy { background:#3fb95033; color:#3fb950; }
+.sig-sell { background:#f8514933; color:#f85149; }
+.sig-hold { background:#8b949e33; color:#8b949e; }
+.sig-watch { background:#d2992233; color:#d29922; }
+
+/* summary */
+.summary { display:flex; gap:10px; margin-bottom:10px; }
+.box { flex:1; padding:10px; border-radius:8px; text-align:center;flex-wrap: wrap }
+.buy { background:#3fb95022; }
+.sell { background:#f8514922; }
+.watch { background:#d2992222; }
+.hold { background:#8b949e22; }
 </style>
 </head>
 
@@ -66,24 +99,41 @@ td, th {
 
 <div class="container">
 
-<h2>📊 策略型投資 Dashboard</h2>
+<h2>📊 (持股)技術分析報告</h2>
 
-<h3>🚀 Top Picks</h3>
-<div id="topPicks" class="top"></div>
+<!-- 訊號統計 -->
+<div class="summary">
+  <div class="box buy"><b id="buyCount"></b><br>買進</div>
+  <div class="box sell"><b id="sellCount"></b><br>賣出</div>
+  <div class="box watch"><b id="watchCount"></b><br>觀察</div>
+  <div class="box hold"><b id="holdCount"></b><br>中立</div>
+</div>
 
+<!-- 表格 -->
 <div class="card">
 <table>
 <thead>
 <tr>
-<th onclick="sortTable('name')">名稱</th>
-<th onclick="sortTable('code')">代碼</th>
-<th onclick="sortTable('price')">價格</th>
-<th onclick="sortTable('chgPct')">漲跌%</th>
-<th onclick="sortTable('eps_last')">去年EPS</th>
-<th onclick="sortTable('gross_margin')">毛利率</th>
-<th onclick="sortTable('sig')">訊號</th>
-<th onclick="sortTable('strategy')">策略</th>
-<th onclick="sortTable('score')">Score</th>
+<th>名稱</th>
+<th>代碼</th>
+<th>價格</th>
+<th>漲跌</th>
+<th>漲跌%</th>
+<th>震幅%</th>
+<th>去年EPS</th>
+<th>毛利率</th>
+<th>營益率</th>
+<th>淨利率</th>
+<th>殖利率</th>
+<th>PER</th>
+<th>Est.EPS</th>
+<th>KD</th>
+<th>布林</th>
+<th>Bias6</th>
+<th>Bias18</th>
+<th>Bias50</th>
+<th>訊號</th>
+<th>策略</th>
 </tr>
 </thead>
 <tbody id="stockBody"></tbody>
@@ -92,127 +142,92 @@ td, th {
 
 </div>
 
-<!-- ✅ 資料（一定要用 window.stocks） -->
 <script>
-window.stocks = [
-  {"name":"光洋科","code":7728,"price":737,"chgPct":4.54,"eps_last":"4.95","gross_margin":70.34,"k":18.1,"bias6":1.54,"bias18":-0.76,"bb":"中軌","per":148.89,"yield":"0.69","sig":"buy"},
-  {"name":"聯發科","code":2454,"price":1465,"chgPct":0,"eps_last":"66.17","gross_margin":46.13,"k":6.8,"bias6":-3.46,"bias18":-10.6,"bb":"中軌","per":22.14,"yield":"3.65","sig":"buy"},
-  {"name":"台積電","code":2330,"price":1810,"chgPct":-2.43,"eps_last":"66.26","gross_margin":62.33,"k":39.6,"bias6":-0.05,"bias18":-1.81,"bb":"中軌","per":27.32,"yield":"1.22","sig":"hold"}
-];
+const stocks = {{ stocks | tojson }};
 </script>
 
 <script>
-// ===== 工具 =====
-function toNum(v){
-  const n = parseFloat(v);
-  return isNaN(n) ? null : n;
+const sigLabel = { buy:"買進", sell:"賣出", hold:"中立", watch:"觀察" };
+const sigClass = { buy:"sig-buy", sell:"sig-sell", hold:"sig-hold", watch:"sig-watch" };
+
+function kdColor(k){
+  if(k>70) return "#f85149";
+  if(k<30) return "#3fb950";
+  return "#d29922";
 }
 
-// ===== 評分 =====
-function calcScore(s){
-  let score = 0;
-
-  if(s.k < 20) score += 3;
-  else if(s.k < 30) score += 2;
-  else if(s.k > 70) score -= 2;
-
-  if(s.bias6 < -3) score += 2;
-  if(s.bias18 < -5) score += 2;
-
-  if(s.bb?.includes("下")) score += 2;
-  if(s.bb?.includes("上")) score -= 2;
-
-  if(toNum(s.per) && toNum(s.per) < 15) score += 1;
-  if(toNum(s.per) && toNum(s.per) > 60) score -= 1;
-
-  if(toNum(s.yield) > 4) score += 1;
-
-  return score;
+function bbPosition(bb){
+  if(bb.includes("上")) return 80;
+  if(bb.includes("下")) return 20;
+  return 50;
 }
 
-function strategyLabel(score){
-  if(score >= 6) return "🔥強力反彈";
-  if(score >= 4) return "✅可布局";
-  if(score >= 2) return "👀觀察";
-  return "❌避免";
+function distClass(v){
+  if(v == null) return "";
+  return v >= 0 ? "up" : "dn";
 }
 
-// ===== 初始化 =====
-let stocks = window.stocks || [];
+function renderRow(s){
 
-stocks.forEach(s=>{
-  s.score = calcScore(s);
-  s.strategy = strategyLabel(s.score);
-});
+  const chgClass = s.chg >= 0 ? "up":"dn";
+  const chgSign = s.chg >= 0 ? "+" : "";
 
-// 預設排序
-stocks.sort((a,b)=> b.score - a.score);
+  return `
+  <tr>
+    <td class="name">${s.name}</td>
+    <td>${s.code}</td>
+    <td>${s.price}</td>
 
-// ===== render =====
-function render(){
-  if(!stocks.length){
-    document.getElementById("stockBody").innerHTML =
-      `<tr><td colspan="9">⚠️ 無資料</td></tr>`;
-    return;
-  }
+    <td class="${chgClass}">${chgSign}${s.chg}</td>
+    <td class="${chgClass}">${chgSign}${s.chgPct}%</td>
 
-  document.getElementById("stockBody").innerHTML =
-    stocks.map(s=>`
-      <tr>
-        <td>${s.name}</td>
-        <td>${s.code}</td>
-        <td>${s.price}</td>
-        <td class="${s.chgPct>=0?'up':'dn'}">${s.chgPct}%</td>
-        <td>${s.eps_last}</td>
-        <td>${s.gross_margin ?? "-"}</td>
-        <td>${s.sig}</td>
-        <td>${s.strategy}</td>
-        <td><b>${s.score}</b></td>
-      </tr>
-    `).join("");
-
-  renderTop();
-}
-
-// ===== Top Picks =====
-function renderTop(){
-  const top = stocks.slice(0,5);
-  document.getElementById("topPicks").innerHTML =
-    top.map(s=>`
-      <div class="pick">
-        ${s.name} (${s.code})<br>
-        ⭐ ${s.score}<br>
-        ${s.strategy}
+    <td>${s.amp ?? 0}%</td>
+    
+    <td>${s.eps_last ?? "-"}</td>
+    <td class="${distClass(s.gross_margin)}">${s.gross_margin ?? ""}%</td>
+    <td class="${distClass(s.op_margin)}">${s.op_margin ?? ""}%</td>
+    <td class="${distClass(s.net_margin)}">${s.net_margin ?? ""}%</td>
+    <td>${s.yield != null ? s.yield + "%" : "-"}</td>
+    <td>${s.per ?? "-"}</td>
+    <td>${s.est_eps ?? "-"}</td>
+        <td>
+      ${s.k}/${s.d}
+      <div class="kd-bar">
+        <div class="kd-dot" style="left:${s.k}%; background:${kdColor(s.k)}"></div>
       </div>
-    `).join("");
+    </td>
+
+    <td>
+      ${s.bb}
+      <div class="bb-bar">
+        <div class="bb-dot" style="left:${bbPosition(s.bb)}%; background:#58a6ff"></div>
+      </div>
+    </td>
+
+    <!-- 乖離率 -->
+    <td class="${distClass(s.bias6)}">${s.bias6 ?? ""}%</td>
+    <td class="${distClass(s.bias18)}">${s.bias18 ?? ""}%</td>
+    <td class="${distClass(s.bias50)}">${s.bias50 ?? ""}%</td>
+
+    <td><span class="sig ${sigClass[s.sig]}">${sigLabel[s.sig]}</span></td>
+    <td>${s.strategy}</td>
+  </tr>
+  `;
 }
 
-// ===== 排序 =====
-let sortState = {};
+document.getElementById("stockBody").innerHTML =
+  stocks.map(renderRow).join("");
 
-function sortTable(key){
-  const asc = sortState[key] = !sortState[key];
+// 統計
+const buys = stocks.filter(s=>s.sig==='buy').length;
+const sells = stocks.filter(s=>s.sig==='sell').length;
+const watch = stocks.filter(s=>s.sig==='watch').length;
+const hold = stocks.filter(s=>s.sig==='hold').length;
 
-  stocks.sort((a,b)=>{
-    let v1 = a[key];
-    let v2 = b[key];
-
-    const n1 = toNum(v1);
-    const n2 = toNum(v2);
-
-    if(n1 !== null && n2 !== null){
-      return asc ? n1 - n2 : n2 - n1;
-    }
-
-    return asc
-      ? String(v1).localeCompare(String(v2),'zh-Hant')
-      : String(v2).localeCompare(String(v1),'zh-Hant');
-  });
-
-  render();
-}
-
-render();
+document.getElementById("buyCount").innerText = buys;
+document.getElementById("sellCount").innerText = sells;
+document.getElementById("watchCount").innerText = watch;
+document.getElementById("holdCount").innerText = hold;
 </script>
 
 </body>
