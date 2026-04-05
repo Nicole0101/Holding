@@ -10,46 +10,44 @@ from data import get_full_stock_analysis  # 確保 data.py 已準備好
 
 
 def format_output(results):
-    """將原始分析結果進行過濾、評分與多維度排序"""
-    # 1. 過濾掉無效資料
     results = [r for r in results if r and r.get("price")]
 
-    # 2. 計算評分 (Score) 邏輯：綜合殖利率、預估 EPS 與本益比
     for r in results:
-        # 確保數值存在，若為 "-" 則視為 0
-        y = r.get("yield") if isinstance(r.get("yield"), (int, float)) else 0
-        e = r.get("eps_est") if isinstance(
-            r.get("eps_est"), (int, float)) else 0
-        p = r.get("per_est") if isinstance(
-            r.get("per_est"), (int, float)) else 0
+        # ✅ 修正 yield
+        y = 0
+        if isinstance(r.get("yield"), dict):
+            y = r["yield"].get("yield", 0)
+        elif isinstance(r.get("yield"), (int, float)):
+            y = r["yield"]
+
+        e = r.get("eps_est") if isinstance(r.get("eps_est"), (int, float)) else 0
+        p = r.get("per_est") if isinstance(r.get("per_est"), (int, float)) else 0
 
         r["score"] = round((y * 2) + (e * 0.5) - (p * 0.3), 2)
 
-    # 3. 執行多重排序
     sorted_by_score = sorted(results, key=lambda x: x["score"], reverse=True)
     sorted_by_chg = sorted(results, key=lambda x: x["chgPct"], reverse=True)
 
     return {
-        "stocks": sorted_by_score,
-        "top_stocks": sorted_by_score[:5],   # 評分最高前5
-        "hot_stocks": sorted_by_chg[:5],     # 漲幅最高前5
-        "weak_stocks": sorted_by_chg[-5:],   # 跌幅最高前5
+        "stocks": sorted_by_chg,
+        "top_stocks": sorted_by_score[:5],   # ✅ 修回來
+        "hot_stocks": sorted_by_chg[:5],
+        "weak_stocks": sorted_by_chg[-5:],
         "rebound_list": [s for s in results if "反彈" in s.get("strategy", "")],
         "selloff_list": [s for s in results if "出貨" in s.get("strategy", "")],
     }
 
-
 def build_strings(data):
-    """將列表物件轉換為 HTML/LINE 使用的純文字字串"""
     def safe_join(lst):
         return ", ".join([s["name"] for s in lst if s])
 
     return {
-        "top_str": safe_join(data["top_stocks"]),
-        "weak_str": safe_join(data["weak_stocks"]),
-        "rebound_str": safe_join(data["rebound_list"][:5]),
-        "selloff_str": safe_join(data["selloff_list"][:5]),
+        "top_str": safe_join(data.get("top_stocks", [])),
+        "weak_str": safe_join(data.get("weak_stocks", [])),
+        "rebound_str": safe_join(data.get("rebound_list", [])[:5]),
+        "selloff_str": safe_join(data.get("selloff_list", [])[:5]),
     }
+
 
 # ========================
 # 2️⃣ 主流程
@@ -98,7 +96,7 @@ def main():
             template = Template(f.read())
 
         html_content = template.render(
-            stocks=data["stocks"],
+            stocksall=data["stocks"],
             top_stocks=text_data["top_str"],
             weak_stocks=text_data["weak_str"],
             rebound_list=text_data["rebound_str"],
@@ -127,17 +125,19 @@ def send_line_notify(data, file_url):
     """獨立發送 LINE 訊息"""
     try:
         from line_push import send_line
-
-        # 這裡改用評分最高 (Score) 的前五名作為強勢股推薦
-        top5_str = "\n".join(
-            [f"{s['name']}(評分:{s['score']})" for s in data["top_stocks"]]
-        )
-
+        stocks = data.get("stocks", [])
+        top5 = [f"{s['name']}({s['chgPct']}%)" for s in stocks[:5]]
+        weak5 = [f"{s['name']}({s['chgPct']}%)" for s in stocks[-5:]]
         msg = f"""
-📊 台股價值投資分析報告
 
-🔥 綜合評分最高 (Top 5):
-{top5_str}
+📊 (持股)價值投資分析報告
+
+🔥 強勢股
+{chr(10).join(top5)}
+
+⚠ 弱勢股
+{chr(10).join(weak5)}
+📎 {file_url}
 
 📎 完整詳細報表：
 {file_url}

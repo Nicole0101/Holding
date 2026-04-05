@@ -33,7 +33,7 @@ def get_stock_data(stock_id):
             return pd.DataFrame()
 
         df = pd.DataFrame(data["data"])
-        df = df.rename(columns={"max": "high", "min": "low"})
+        df = df.rename(columns={"max": "high", "min": "low", "chg"})
 
         return df[["close", "high", "low"]].dropna()
 
@@ -156,7 +156,7 @@ def get_eps_analysis(stock_id, current_price):
         per_est = calc_per(current_price, est_eps)
         print("股票: ", stock_id, "EPS: ", last_Y_eps, ttm_eps, est_eps,
               "PER", per_last, per_ttm, per_est)
-        return last_Y_eps, ttm_eps, est_eps, per_last, per_ttm, per_est
+        #   return last_Y_eps, ttm_eps, est_eps, per_last, per_ttm, per_est
     except Exception as e:
         print(f"❌ EPS/PER 分析錯誤 {stock_id}: {e}")
         return None, None, None, None, None, None
@@ -351,11 +351,11 @@ def process_stock(s):
         df = get_stock_data(s["stock_id"])
         if df.empty or len(df) < 60:
             return None
-
         df = add_indicators(df)
         latest, prev = df.iloc[-1], df.iloc[-2]
 
         # 2. 計算漲跌幅與震幅
+        chg = latest["close"] - latest["open"]
         chgPct = round(
             ((latest["close"] - prev["close"]) / prev["close"]) * 100, 2)
         amp = round(
@@ -391,16 +391,17 @@ def process_stock(s):
             "chgPct": chgPct,
             "amp": amp,
             "gross_margin": gm,
+            "operating_Margin": om,
             "net_margin": nm,
             # EPS 與 PER 相關資料 (從元組中取值)
             "eps_Y": eps_res[0] if eps_res[0] is not None else "-",
-            #   "eps_ttm": eps_res[1] if eps_res[1] is not None else "-",
-            #   "eps_est": eps_res[2] if eps_res[2] is not None else "-",
+            "eps_ttm": eps_res[1] if eps_res[1] is not None else "-",
+            "eps_est": eps_res[2] if eps_res[2] is not None else "-",
             "eps_estcombined": f"{eps_res[1] if eps_res[1] is not None else '-'} / {eps_res[2] if eps_res[2] is not None else '-'}",
             "yield": yield_pct if yield_pct is not None else "-",
-            #   "per_Y": eps_res[3] if eps_res[3] is not None else "-",
-            #   "per_ttm": eps_res[4] if eps_res[4] is not None else "-",
-            #   "per_est": eps_res[5] if eps_res[5] is not None else "-",
+            "per_Y": eps_res[3] if eps_res[3] is not None else "-",
+            "per_ttm": eps_res[4] if eps_res[4] is not None else "-",
+            "per_est": eps_res[5] if eps_res[5] is not None else "-",
             "per_estcombined": f"{eps_res[3] if eps_res[3] is not None else '-'} / {eps_res[4] if eps_res[4] is not None else '-'}/ {eps_res[5] if eps_res[5] is not None else '-'}",
             "k": round(k, 1),
             "bb": (

@@ -144,13 +144,29 @@ function renderRow(s){
     <td class="${chgClass}">${chgSign}${s.chgPct}%</td>
     <td>${s.amp ?? 0}%</td>
     <td>${s.eps_Y ?? "-"}</td>
-    <td>${s.eps_estcombined ?? "-"}</td>    
+    #    <td>${s.eps_ttm ?? "-"} 
+    #    <td>${s.eps_est ?? "-"} 
+    
+    <td>${s.eps_ttm ?? "-"} / ${s.eps_est ?? "-"}</td>
+    <td>
+      <small style="color: gray;">TTM:</small> ${s.eps_ttm ?? "-"} <br>
+      <small style="color: blue;">預估:</small> ${s.eps_est ?? "-"}
+    </td>
+
     <td class="${distClass(s.gross_margin)}">${s.gross_margin ?? ""}%</td>
-    <td class="${distClass(s.op_margin)}">${s.op_margin ?? ""}%</td>
+    <td class="${distClass(s.oerating_Margin)}">${s.op_margin ?? ""}%</td>
     <td class="${distClass(s.net_margin)}">${s.net_margin ?? ""}%</td>
-    <td>${s.est_eps ?? "-"}</td>
-    <td>${s.yield != null ? s.yield + "%" : "-"}</td>
+    #    <td>${s.yield != null ? s.yield + "%" : "-"}</td>
+    <td>${s.yield?.yield ?? "-"}%</td>
+
     <td>${s.per_estcombined ?? "-"}</td>    
+    <td>${s.per_ttm ?? "-"} / ${s.per_est ?? "-"}</td>
+    <td>
+      <small style="color: gray;">TTM:</small> ${s.per_ttm ?? "-"} <br>
+      <small style="color: blue;">預估:</small> ${s.per_est ?? "-"}
+    </td>
+
+
     <td>${s.k}/${s.d}
         <div class="kd-bar">
         <div class="kd-dot" style="left:${s.k}%; background:${kdColor(s.k)}"></div>
