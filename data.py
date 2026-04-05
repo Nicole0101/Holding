@@ -1,18 +1,22 @@
+import logging
 import requests
 import pandas as pd
 import os
-import logging
 from datetime import datetime, timedelta
 from FinMind.data import DataLoader
 
 API_TOKEN = os.getenv("FINMIND_TOKEN")
 api_url = "https://api.finmindtrade.com/api/v4/data"
 api = DataLoader()
+
+# 停用所有來自 FinMind 的 Log 訊息
 logging.getLogger('FinMind').setLevel(logging.WARNING)
 
 # ========================
 # 1️⃣ 價格資料
 # ========================
+
+
 def get_stock_data(stock_id):
     try:
         params = {
@@ -150,7 +154,7 @@ def get_eps_analysis(stock_id, current_price):
         per_last = calc_per(current_price, last_Y_eps)
         per_ttm = calc_per(current_price, ttm_eps)
         per_est = calc_per(current_price, est_eps)
-        print("EPS; ", last_Y_eps, ttm_eps, est_eps,
+        print("股票: ", stock_id, "EPS: ", last_Y_eps, ttm_eps, est_eps,
               "PER", per_last, per_ttm, per_est)
         return last_Y_eps, ttm_eps, est_eps, per_last, per_ttm, per_est
     except Exception as e:
@@ -390,12 +394,14 @@ def process_stock(s):
             "net_margin": nm,
             # EPS 與 PER 相關資料 (從元組中取值)
             "eps_Y": eps_res[0] if eps_res[0] is not None else "-",
-            "eps_ttm": eps_res[1] if eps_res[1] is not None else "-",
-            "eps_est": eps_res[2] if eps_res[2] is not None else "-",
-            "per_Y": eps_res[3] if eps_res[3] is not None else "-",
-            "per_ttm": eps_res[4] if eps_res[4] is not None else "-",
-            "per_est": eps_res[5] if eps_res[5] is not None else "-",
+            #   "eps_ttm": eps_res[1] if eps_res[1] is not None else "-",
+            #   "eps_est": eps_res[2] if eps_res[2] is not None else "-",
+            "eps_estcombined": f"{eps_res[1] if eps_res[1] is not None else '-'} / {eps_res[2] if eps_res[2] is not None else '-'}",
             "yield": yield_pct if yield_pct is not None else "-",
+            #   "per_Y": eps_res[3] if eps_res[3] is not None else "-",
+            #   "per_ttm": eps_res[4] if eps_res[4] is not None else "-",
+            #   "per_est": eps_res[5] if eps_res[5] is not None else "-",
+            "per_estcombined": f"{eps_res[3] if eps_res[3] is not None else '-'} / {eps_res[4] if eps_res[4] is not None else '-'}/ {eps_res[5] if eps_res[5] is not None else '-'}",
             "k": round(k, 1),
             "bb": (
                 "上軌" if latest["close"] > latest["BB_upper"] else
