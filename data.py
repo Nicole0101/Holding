@@ -31,7 +31,7 @@ def get_stock_data(stock_id):
         if "data" not in data or len(data["data"]) == 0:
             return pd.DataFrame()
         df = pd.DataFrame(data["data"])
-        required_cols = ["open", "close", "high", "low"]
+        required_cols = ["open", "close", "max", "min"]
         df = df[required_cols].dropna()
         return df
     except Exception as e:
