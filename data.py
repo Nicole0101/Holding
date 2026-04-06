@@ -57,7 +57,7 @@ def get_profit_ratio(stock_id):
         GrossProfit = latest.get("GrossProfit", 0)
         OperatingIncome = latest.get("OperatingIncome")
         IncomeAfterTaxes = latest.get("IncomeAfterTaxes", 0)
-        print("stock_id:", stock_id, "Revenue", revenue,
+        print("財務資料", "Revenue", revenue,
               GrossProfit, OperatingIncome, IncomeAfterTaxes)
         if revenue == 0:
             return None, None, None
