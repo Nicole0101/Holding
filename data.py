@@ -169,6 +169,15 @@ def get_profit_ratio(stock_id):
         print(f"❌ profit error {stock_id}: {e}")
         return None
 
+
+def extract_metric(res, key):
+    if not res:
+        return None, None, None
+    return (
+        res["current"].get(key),
+        res["qoq"].get(key),
+        res["yoy_diff"].get(key),
+    )
 # ========================
 # 3️⃣ EPS
 # ========================
@@ -440,6 +449,35 @@ def get_MABias(df):
 
     return stats
 
+
+#   margin_score（毛利品質）
+def calc_margin_score(gross, op, net):
+    score = 0
+    if gross is not None:
+        score += gross * 0.4
+    if op is not None:
+        score += op * 0.3
+    if net is not None:
+        score += net * 0.3
+    return round(score, 2)
+
+
+#   eps_score（成長性）
+def calc_eps_score(eps_ttm, eps_est):
+    if eps_ttm is None or eps_est is None or eps_ttm <= 0:
+        return 0
+    growth = (eps_est - eps_ttm) / eps_ttm * 100
+    return round(growth, 2)
+
+
+#   trend_score（動能）
+def calc_trend_score(qoq_g, yoy_g, qoq_n, yoy_n):
+    vals = [qoq_g, yoy_g, qoq_n, yoy_n]
+    vals = [v for v in vals if v is not None]
+    if not vals:
+        return 0
+    return round(sum(vals) / len(vals), 2)
+
 # ========================
 # 5️⃣ 單支股票分析
 # ========================
@@ -462,13 +500,20 @@ def process_stock(s):
 
         # 3. 呼叫各項分析函式 (結構化資料)
         # EPS 分析回傳: (last_year_eps, ttm_eps, est_eps, per_last, per_ttm, per_est)
-        eps_res = get_eps_analysis(s["stock_id"], latest["close"]) or (None,)*6
+        eps_res = get_eps_analysis(s["stock_id"], latest["close"])
+        if not eps_res or not isinstance(eps_res, tuple):
+            eps_res = (None,) * 6
         # 獲取毛利與淨利率
         # 毛利率（避免 0 被吃掉）
-        profit_res = get_profit_ratio(s["stock_id"])
-        profit_output = build_output(profit_res) if profit_res else {}
-        #   print("stock_id ", s["stock_id"], "eps_res: ", eps_res)
-        #   print("stock_id ", s["stock_id"], "profit_res: ", profit_res)
+        profit_res = get_profit_ratio(s["stock_id"]) or {
+            "current": {},
+            "qoq": {},
+            "yoy_diff": {}
+        }
+        cur_g, qoq_g, yoy_g = extract_metric(profit_res, "gross")
+        cur_o, qoq_o, yoy_o = extract_metric(profit_res, "op")
+        cur_n, qoq_n, yoy_n = extract_metric(profit_res, "net")
+
         # 獲取殖利率
         yield_pct = get_dividend_yield(s["stock_id"], latest["close"])
 
@@ -498,6 +543,20 @@ def process_stock(s):
             0
         )
 
+        #   評分公司成長
+        margin_score = calc_margin_score(cur_g, cur_o, cur_n)
+        eps_score = calc_eps_score(eps_res[1], eps_res[2])
+        trend_score = calc_trend_score(
+            qoq_g, yoy_g,
+            qoq_n, yoy_n
+        )
+        score = round(
+            margin_score * 0.4 +
+            eps_score * 0.3 +
+            trend_score * 0.3,
+            2
+        )
+
         # 5. 回傳結構化字典
         return {
             "name": s["name"][:3],
@@ -507,16 +566,27 @@ def process_stock(s):
             "chgPct": chgPct,
             "amp": amp,
 
-            "gross_margin": f"{fmt(profit_output.get('gross_margin'))}\n({fmt(profit_output.get('gross_margin_qoq'))}, {fmt(profit_output.get('gross_margin_yoy_diff'))})",
-            "operating_margin": f"{fmt(profit_output.get('operating_margin'))}\n ({fmt(profit_output.get('operating_margin_qoq'))}, {fmt(profit_output.get('operating_margin_yoy_diff'))})",
-            "net_margin": f"{fmt(profit_output.get('net_margin'))} \n({fmt(profit_output.get('net_margin_qoq'))}, {fmt(profit_output.get('net_margin_yoy_diff'))})",
+            # 毛利率
+            "gross_margin": cur_g,
+            "gross_margin_qoq": qoq_g,
+            "gross_margin_yoy_diff": yoy_g,
+
+            # 營益率
+            "operating_margin": cur_o,
+            "operating_margin_qoq": qoq_o,
+            "operating_margin_yoy_diff": yoy_o,
+
+            # 淨利率
+            "net_margin": cur_n,
+            "net_margin_qoq": qoq_n,
+            "net_margin_yoy_diff": yoy_n,
 
             # EPS 與 PER 相關資料 (從元組中取值)
             "eps_Y": eps_res[0] if eps_res[0] is not None else "-",
             "eps_ttm": eps_res[1] if eps_res[1] is not None else "-",
             "eps_est": eps_res[2] if eps_res[2] is not None else "-",
             "eps_estcombined": f"{eps_res[1] if eps_res[1] is not None else '-'} / {eps_res[2] if eps_res[2] is not None else '-'}",
-            "yield": yield_pct if yield_pct is not None else "-",
+            "yield": yield_pct,
             "per_Y": eps_res[3] if eps_res[3] is not None else "-",
             "per_ttm": eps_res[4] if eps_res[4] is not None else "-",
             "per_est": eps_res[5] if eps_res[5] is not None else "-",
@@ -527,6 +597,7 @@ def process_stock(s):
             # 自動展開 ma6, bias6, ma18, bias18, ma50, bias50 等欄位
             **ma_stats,
             "sig": sig,
+            "score": score,
             "strategy": strategy
         }
 
@@ -541,10 +612,8 @@ def process_stock(s):
 
 def get_full_stock_analysis(stock_list):
     results = []
-
     for s in stock_list:
         data = process_stock(s)
         if data:
             results.append(data)
-
     return results
