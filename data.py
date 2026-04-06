@@ -377,18 +377,16 @@ def process_stock(s):
 
         # 3. 呼叫各項分析函式 (結構化資料)
         # EPS 分析回傳: (last_year_eps, ttm_eps, est_eps, per_last, per_ttm, per_est)
-        #   eps_res = get_eps_analysis(s["stock_id"], latest["close"])
         eps_res = get_eps_analysis(s["stock_id"], latest["close"]) or (None,)*6
         # 獲取毛利與淨利率
-        #   gm, om, nm = get_profit_ratio(s["stock_id"]) or (None, None, None)
         # 毛利率（避免 0 被吃掉）
         profit_res = get_profit_ratio(s["stock_id"])
         if profit_res is None:
             gm, om, nm = None, None, None
         else:
             gm, om, nm = profit_res
-        print("stock_id ", s["stock_id"], "eps_res: ", eps_res)
-        print("stock_id ", s["stock_id"], "profit_res: ", profit_res)
+        #   print("stock_id ", s["stock_id"], "eps_res: ", eps_res)
+        #   print("stock_id ", s["stock_id"], "profit_res: ", profit_res)
         # 獲取殖利率
         yield_pct = get_dividend_yield(s["stock_id"], latest["close"])
 
@@ -397,6 +395,7 @@ def process_stock(s):
 
         # 4. 策略邏輯判斷
         k = latest["K"] if pd.notna(latest["K"]) else 50
+        D = latest["D"] if pd.notna(latest["D"]) else 50
         strategy = (
             "反彈🔥" if amp > 5 and k < 30 else
             "出貨⚠" if amp > 5 and k > 70 else
@@ -426,6 +425,7 @@ def process_stock(s):
             "per_est": eps_res[5] if eps_res[5] is not None else "-",
             "per_estcombined": f"{eps_res[3] if eps_res[3] is not None else '-'} / {eps_res[4] if eps_res[4] is not None else '-'}/ {eps_res[5] if eps_res[5] is not None else '-'}",
             "k": round(k, 1),
+            "D": round(D, 1),
             "bb": (
                 "上軌" if latest["close"] > latest["BB_upper"] else
                 "下軌" if latest["close"] < latest["BB_lower"] else
@@ -433,6 +433,7 @@ def process_stock(s):
             ),
             # 自動展開 ma6, bias6, ma18, bias18, ma50, bias50 等欄位
             **ma_stats,
+            "sig": "buy" if k < 30 else "sell" if k > 70 else "hold",
             "strategy": strategy
         }
 
