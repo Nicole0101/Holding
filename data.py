@@ -45,8 +45,8 @@ def get_stock_data(stock_id):
 # 2️⃣ 財務資料
 # ========================
 def safe_margin(num, denom):
-    num = to_number(num)
-    denom = to_number(denom)
+    #   num = to_number(num)
+    #   denom = to_number(denom)
     if num is None or denom is None or denom <= 0:
         return None
     return round(num / denom * 100, 2)
@@ -405,9 +405,9 @@ def process_stock(s):
         bb_lower = latest["BB_lower"]
         close = latest["close"]
         bb_pct = None
-
         if pd.notna(bb_upper) and pd.notna(bb_lower) and bb_upper != bb_lower:
             bb_pct = round((close - bb_lower) / (bb_upper - bb_lower) * 100, 1)
+            
         strategy = (
             "反彈🔥" if amp > 5 and k < 30 else
             "出貨⚠" if amp > 5 and k > 70 else
