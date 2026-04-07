@@ -491,6 +491,7 @@ def process_stock(s):
             return None
         df = add_indicators(df)
         latest, prev = df.iloc[-1], df.iloc[-2]
+        print("df; ", df)
 
         # 2. 計算漲跌幅與震幅
         chg = latest["close"] - prev["close"]
