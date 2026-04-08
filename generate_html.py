@@ -37,6 +37,9 @@ def format_output(results):
         "weak_stocks": sorted_by_chg[-5:],
         "rebound_list": [s for s in results if "反彈" in s.get("strategy", "")],
         "selloff_list": [s for s in results if "出貨" in s.get("strategy", "")],
+        "buy_signal_list": [s for s in results if s.get("sig") == 1],
+        "volume_up_list": [s for s in results if s.get("volume_ok")],
+        "bottom_pick_list": [s for s in results if s.get("entry_note") == "抄底"]
     }
 
 
@@ -76,7 +79,7 @@ def main():
     # 2. 格式化資料與時間處理
     data = format_output(results)
     text_data = build_strings(data)
-
+    print("sample stock keys:", data["stocks"][0].keys() if data["stocks"] else [])
     now_dt = datetime.utcnow() + timedelta(hours=8)
     now_str = now_dt.strftime("%m%d%H%M")
     filename = f"持股_{now_str}.html"
@@ -112,7 +115,7 @@ def main():
             selloff_list=text_data["selloff_str"],
             generated_time=now_dt.strftime("%Y-%m-%d %H:%M")
         )
-
+        
         # 寫入當前檔案與 index.html
         for f_name in [filename, "index.html"]:
             with open(f_name, "w", encoding="utf-8") as f:

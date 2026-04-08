@@ -244,6 +244,9 @@ tbody td:first-child {
             <th data-key="bias6">Bias6</th>
             <th data-key="bias18">Bias18</th>
             <th data-key="bias50">Bias50</th>
+            <th>月線</th>
+            <th>成交量</th>
+            <th>量增%</th>  
             <th data-key="sig">訊號</th>
             <th data-key="strategy">策略</th>
           </tr>
@@ -367,6 +370,34 @@ function renderRow(s) {
     <td class="${distClass(s.bias6)}">${s.bias6 ?? ""}%</td>
     <td class="${distClass(s.bias18)}">${s.bias18 ?? ""}%</td>
     <td class="${distClass(s.bias50)}">${s.bias50 ?? ""}%</td>
+
+    <td>
+      ${s.ma20 ?? "-"}<br>
+      <small class="${s.ma20_break ? 'text-red' : ''}">
+        ${s.ma20_break ? '站上月線' : ''}
+      </small>
+    </td>
+
+    <td>
+      ${s.volume ?? "-"} 張<br>
+      <small>昨:${s.prev_volume ?? "-"}</small>
+    </td>
+
+    <td class="${(s.volume_ratio ?? 0) > 0 ? 'up' : 'dn'}">
+      ${s.volume_ratio ?? "-"}%
+      <br>
+      <small>${s.volume_add ?? "-"} 張</small>
+    </td>
+
+    <td>
+      <span class="sig ${sigClass[s.sig] ?? 'watch'}">${sigLabel[s.sig] ?? '觀望'}</span>
+      <br>
+      <small>${s.signal_text ?? ""}</small>
+    </td>
+
+    <td>${s.strategy}${s.entry_note ? ` / ${s.entry_note}` : ""}</td> 
+
+
     <td><span class="sig ${sigClass[s.sig] ?? "watch"}">${sigLabel[s.sig] ?? "觀望"}</span></td>
     <td>${s.strategy ?? ""}</td>
   </tr>`;
