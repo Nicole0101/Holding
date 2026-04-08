@@ -24,6 +24,9 @@ body {
   border: 1px solid #30363d;
   border-radius: 10px;
   padding: 15px;
+}
+
+.table-scroll {
   overflow: auto;
   max-height: 600px;
 }
@@ -208,45 +211,47 @@ tbody td:first-child {
 
 <div class="container">
 
-<h2>(持股)台股技術分析報告</h2>
+  <h2>(持股)台股技術分析報告</h2>
 
-<div class="summary">
-  <div class="box buy"><b id="buyCount"></b><br>反彈</div>
-  <div class="box sell"><b id="sellCount"></b><br>出貨</div>
-  <div class="box watch"><b id="watchCount"></b><br>觀察</div>
-  <div class="box hold"><b id="holdCount"></b><br>整理</div>
-</div>
+  <div class="summary">
+    <div class="box buy"><b id="buyCount"></b><br>反彈</div>
+    <div class="box sell"><b id="sellCount"></b><br>出貨</div>
+    <div class="box watch"><b id="watchCount"></b><br>觀察</div>
+    <div class="box hold"><b id="holdCount"></b><br>整理</div>
+  </div>
 
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th data-key="name">名稱</th>
-        <th data-key="code">代碼</th>
-        <th data-key="price">價格</th>
-        <th data-key="chg">漲跌</th>
-        <th data-key="chgPct">漲跌%</th>
-        <th data-key="amp">震幅%</th>
-        <th data-key="eps_Y">去年EPS</th>
-        <th data-key="eps_est">估EPS</th>
-        <th data-key="gross_margin">毛利率%<br><small>QoQ YoY</small></th>
-        <th data-key="operating_margin">營益率%<br><small>QoQ YoY</small></th>
-        <th data-key="net_margin">淨利率%<br><small>QoQ YoY</small></th>
-        <th data-key="scoreValue">評分</th>
-        <th data-key="yieldValue">殖利率</th>
-        <th data-key="per_ttm">本益比</th>
-        <th data-key="k">KD</th>
-        <th data-key="bb_pct">布林</th>
-        <th data-key="bias6">Bias6</th>
-        <th data-key="bias18">Bias18</th>
-        <th data-key="bias50">Bias50</th>
-        <th data-key="sig">訊號</th>
-        <th data-key="strategy">策略</th>
-      </tr>
-    </thead>
-    <tbody id="stockBody"></tbody>
-  </table>
-</div>
+  <div class="card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="name">名稱</th>
+            <th data-key="code">代碼</th>
+            <th data-key="price">價格</th>
+            <th data-key="chg">漲跌</th>
+            <th data-key="chgPct">漲跌%</th>
+            <th data-key="amp">震幅%</th>
+            <th data-key="eps_Y">去年EPS</th>
+            <th data-key="eps_est">估EPS</th>
+            <th data-key="gross_margin">毛利率%<br><small>QoQ YoY</small></th>
+            <th data-key="operating_margin">營益率%<br><small>QoQ YoY</small></th>
+            <th data-key="net_margin">淨利率%<br><small>QoQ YoY</small></th>
+            <th data-key="scoreValue">評分</th>
+            <th data-key="yieldValue">殖利率</th>
+            <th data-key="per_ttm">本益比</th>
+            <th data-key="k">KD</th>
+            <th data-key="bb_pct">布林</th>
+            <th data-key="bias6">Bias6</th>
+            <th data-key="bias18">Bias18</th>
+            <th data-key="bias50">Bias50</th>
+            <th data-key="sig">訊號</th>
+            <th data-key="strategy">策略</th>
+          </tr>
+        </thead>
+        <tbody id="stockBody"></tbody>
+      </table>
+    </div>
+  </div>
 
 </div>
 
