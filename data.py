@@ -545,6 +545,14 @@ def process_stock(s):
         yield_pct = get_dividend_yield(s["stock_id"], latest["close"])
         ma_stats = get_MABias(df)
 
+        # ===== 把 ma_stats 轉成 Python 原生型別 =====
+        safe_ma_stats = {}
+        for k2, v2 in ma_stats.items():
+            if v2 is None or pd.isna(v2):
+                safe_ma_stats[k2] = None
+            else:
+                safe_ma_stats[k2] = float(v2)
+
         # ===== 技術值 =====
         k = latest["K"] if pd.notna(latest["K"]) else 50
         d = latest["D"] if pd.notna(latest["D"]) else 50
@@ -558,11 +566,11 @@ def process_stock(s):
         prev_close = prev["close"]
 
         # ===== KD 買點 =====
-        kd_buy = (prev_k <= prev_d) and (k > d)
-        kd_low_buy = kd_buy and k < 35
+        kd_buy = bool((prev_k <= prev_d) and (k > d))
+        kd_low_buy = bool(kd_buy and k < 35)
 
         # ===== 月線買點 =====
-        ma20_break = (
+        ma20_break = bool(
             ma20 is not None and prev_ma20 is not None and
             prev_close <= prev_ma20 and close > ma20
         )
@@ -577,7 +585,9 @@ def process_stock(s):
         if pd.notna(volume) and pd.notna(prev_volume) and prev_volume > 0:
             volume_ratio = round((volume / prev_volume - 1) * 100, 2)
             volume_add = round(volume - prev_volume, 0)
-            volume_ok = (volume >= prev_volume * 1.1) or ((volume - prev_volume) >= 500)
+            volume_ok = bool(
+                (volume >= prev_volume * 1.1) or ((volume - prev_volume) >= 500)
+            )
 
         # ===== 布林位置 =====
         bb_upper = latest["BB_upper"]
@@ -639,47 +649,47 @@ def process_stock(s):
         return {
             "name": s["name"][:3],
             "code": s["stock_id"],
-            "price": round(close, 2),
-            "chg": round(chg, 2),
-            "chgPct": chgPct,
-            "amp": amp,
+            "price": float(round(close, 2)),
+            "chg": float(round(chg, 2)),
+            "chgPct": float(chgPct),
+            "amp": float(amp),
 
-            "gross_margin": cur_g,
-            "gross_margin_qoq": qoq_g,
-            "gross_margin_yoy_diff": yoy_g,
+            "gross_margin": float(cur_g) if cur_g is not None else None,
+            "gross_margin_qoq": float(qoq_g) if qoq_g is not None else None,
+            "gross_margin_yoy_diff": float(yoy_g) if yoy_g is not None else None,
 
-            "operating_margin": cur_o,
-            "operating_margin_qoq": qoq_o,
-            "operating_margin_yoy_diff": yoy_o,
+            "operating_margin": float(cur_o) if cur_o is not None else None,
+            "operating_margin_qoq": float(qoq_o) if qoq_o is not None else None,
+            "operating_margin_yoy_diff": float(yoy_o) if yoy_o is not None else None,
 
-            "net_margin": cur_n,
-            "net_margin_qoq": qoq_n,
-            "net_margin_yoy_diff": yoy_n,
+            "net_margin": float(cur_n) if cur_n is not None else None,
+            "net_margin_qoq": float(qoq_n) if qoq_n is not None else None,
+            "net_margin_yoy_diff": float(yoy_n) if yoy_n is not None else None,
 
-            "eps_Y": eps_res[0] if eps_res[0] is not None else "-",
-            "eps_ttm": eps_res[1] if eps_res[1] is not None else "-",
-            "eps_est": eps_res[2] if eps_res[2] is not None else "-",
+            "eps_Y": float(eps_res[0]) if eps_res[0] is not None else "-",
+            "eps_ttm": float(eps_res[1]) if eps_res[1] is not None else "-",
+            "eps_est": float(eps_res[2]) if eps_res[2] is not None else "-",
             "yield": yield_pct,
-            "per_Y": eps_res[3] if eps_res[3] is not None else "-",
-            "per_ttm": eps_res[4] if eps_res[4] is not None else "-",
-            "per_est": eps_res[5] if eps_res[5] is not None else "-",
+            "per_Y": float(eps_res[3]) if eps_res[3] is not None else "-",
+            "per_ttm": float(eps_res[4]) if eps_res[4] is not None else "-",
+            "per_est": float(eps_res[5]) if eps_res[5] is not None else "-",
 
-            "k": round(k, 1),
-            "d": round(d, 1),
-            "ma20": round(ma20, 2) if ma20 is not None else "-",
-            "ma20_break": ma20_break,
-            "kd_buy": kd_buy,
-            "bb_pct": bb_pct,
+            "k": float(round(k, 1)),
+            "d": float(round(d, 1)),
+            "ma20": float(round(ma20, 2)) if ma20 is not None else "-",
+            "ma20_break": bool(ma20_break),
+            "kd_buy": bool(kd_buy),
+            "bb_pct": float(bb_pct) if bb_pct is not None else None,
 
-            "volume": round(volume, 0) if pd.notna(volume) else "-",
-            "prev_volume": round(prev_volume, 0) if pd.notna(prev_volume) else "-",
-            "volume_ratio": volume_ratio,
-            "volume_add": volume_add,
-            "volume_ok": volume_ok,
+            "volume": int(round(volume, 0)) if pd.notna(volume) else "-",
+            "prev_volume": int(round(prev_volume, 0)) if pd.notna(prev_volume) else "-",
+            "volume_ratio": float(volume_ratio) if volume_ratio is not None else None,
+            "volume_add": int(round(volume_add, 0)) if volume_add is not None else None,
+            "volume_ok": bool(volume_ok),
 
-            **ma_stats,
-            "sig": sig,
-            "score": score,
+            **safe_ma_stats,
+            "sig": int(sig),
+            "score": float(score),
             "strategy": strategy,
             "signal_text": signal_text,
             "entry_note": entry_note
