@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import os
 from loguru import logger
-from datetime import datetime, timedelta
+from datetime import datetime
 from FinMind.data import DataLoader
 
 API_TOKEN = os.getenv("FINMIND_TOKEN")
@@ -12,7 +12,7 @@ api = DataLoader()
 
 # 停用所有來自 FinMind 的 Log 訊息
 logger.remove()
-logging.getLogger('FinMind').setLevel(logging.WARNING)
+logging.getLogger("FinMind").setLevel(logging.WARNING)
 
 
 # ========================
@@ -24,7 +24,7 @@ def get_stock_data(stock_id):
             "dataset": "TaiwanStockPrice",
             "data_id": str(stock_id),
             "start_date": "2023-01-01",
-            "token": API_TOKEN
+            "token": API_TOKEN,
         }
         res = requests.get(api_url, params=params, timeout=10)
         data = res.json()
@@ -34,7 +34,6 @@ def get_stock_data(stock_id):
 
         df = pd.DataFrame(data["data"])
 
-        # FinMind 股價資料常見成交量欄位
         volume_col = None
         for c in ["Trading_Volume", "trading_volume", "Trading_Volume_1000"]:
             if c in df.columns:
@@ -50,14 +49,12 @@ def get_stock_data(stock_id):
 
         if volume_col:
             df["volume"] = pd.to_numeric(df[volume_col], errors="coerce")
-            # 股數轉成張
             if df["volume"].max() > 100000:
                 df["volume"] = df["volume"] / 1000
         else:
             df["volume"] = None
 
-        df = df.dropna(subset=["open", "close", "max",
-                       "min"]).sort_values("date")
+        df = df.dropna(subset=["open", "close", "max", "min"]).sort_values("date")
         return df
 
     except Exception as e:
@@ -69,8 +66,6 @@ def get_stock_data(stock_id):
 # 2️⃣ 財務資料
 # ========================
 def safe_margin(num, denom):
-    #   num = to_number(num)
-    #   denom = to_number(denom)
     if num is None or denom is None or denom <= 0:
         return None
     return round(num / denom * 100, 2)
@@ -93,8 +88,7 @@ def build_output(result):
     qoq = result["qoq"]
     yoy_diff = result["yoy_diff"]
 
-    output = {
-        # ===== 毛利率 =====
+    return {
         "gross_margin": cur["gross"],
         "gross_margin_prev": prev["gross"],
         "gross_margin_yoy": yoy["gross"],
@@ -102,7 +96,6 @@ def build_output(result):
         "gross_margin_yoy_diff": yoy_diff["gross"],
         "gross_margin_combined": f"{fmt(cur['gross'])} / {fmt(prev['gross'])} / {fmt(yoy['gross'])}",
 
-        # ===== 營益率 =====
         "operating_margin": cur["op"],
         "operating_margin_prev": prev["op"],
         "operating_margin_yoy": yoy["op"],
@@ -110,7 +103,6 @@ def build_output(result):
         "operating_margin_yoy_diff": yoy_diff["op"],
         "operating_margin_combined": f"{fmt(cur['op'])} / {fmt(prev['op'])} / {fmt(yoy['op'])}",
 
-        # ===== 淨利率 =====
         "net_margin": cur["net"],
         "net_margin_prev": prev["net"],
         "net_margin_yoy": yoy["net"],
@@ -119,45 +111,41 @@ def build_output(result):
         "net_margin_combined": f"{fmt(cur['net'])} / {fmt(prev['net'])} / {fmt(yoy['net'])}",
     }
 
-    return output
-
 
 def get_profit_ratio(stock_id):
     try:
         df = api.taiwan_stock_financial_statement(
             stock_id=stock_id,
-            start_date="2022-01-01"  # 至少抓2年以上
+            start_date="2022-01-01",
         )
 
         if df.empty:
             return None
 
-        # ===== 基本整理 =====
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values("date")
 
-        # ===== pivot 成每季一列 =====
         pivot = df.pivot_table(
             index="date",
             columns="type",
             values="value",
-            aggfunc="last"
+            aggfunc="last",
         ).sort_index()
 
-        # ===== 只留必要欄位 =====
-        cols = ["Revenue", "GrossProfit",
-                "OperatingIncome", "IncomeAfterTaxes"]
+        cols = ["Revenue", "GrossProfit", "OperatingIncome", "IncomeAfterTaxes"]
+        missing_cols = [c for c in cols if c not in pivot.columns]
+        if missing_cols:
+            return None
+
         pivot = pivot[cols].dropna()
 
         if len(pivot) < 5:
             return None
 
-        # ===== 抓三個時間點 =====
-        current = pivot.iloc[-1]       # 本期
-        prev = pivot.iloc[-2]          # 上季
-        yoy = pivot.iloc[-5]           # 去年同期（4季前）
+        current = pivot.iloc[-1]
+        prev = pivot.iloc[-2]
+        yoy = pivot.iloc[-5]
 
-        # ===== 計算三率 =====
         def calc(row):
             return {
                 "gross": safe_margin(row["GrossProfit"], row["Revenue"]),
@@ -169,26 +157,22 @@ def get_profit_ratio(stock_id):
         prev_m = calc(prev)
         yoy_m = calc(yoy)
 
-        # ===== QoQ / YoY =====
-        result = {
+        return {
             "current": cur_m,
             "prev": prev_m,
             "yoy": yoy_m,
-
             "qoq": {
                 "gross": calc_diff(cur_m["gross"], prev_m["gross"]),
                 "op": calc_diff(cur_m["op"], prev_m["op"]),
                 "net": calc_diff(cur_m["net"], prev_m["net"]),
             },
-
             "yoy_diff": {
                 "gross": calc_diff(cur_m["gross"], yoy_m["gross"]),
                 "op": calc_diff(cur_m["op"], yoy_m["op"]),
                 "net": calc_diff(cur_m["net"], yoy_m["net"]),
-            }
+            },
         }
 
-        return result
     except Exception as e:
         print(f"❌ profit error {stock_id}: {e}")
         return None
@@ -202,50 +186,41 @@ def extract_metric(res, key):
         res["qoq"].get(key),
         res["yoy_diff"].get(key),
     )
+
+
 # ========================
 # 3️⃣ EPS
 # ========================
-
-
 def get_eps_analysis(stock_id, current_price):
     """
-    回傳: (去年EPS, TTM_EPS, 預估今年EPS, 去年PER, TTM_PER, 預估PER)
+    回傳:
+    (去年EPS, TTM_EPS, 預估今年EPS, 去年PER, TTM_PER, 預估PER)
     """
-    # 初始化回傳值
-    last_Y_eps, ttm_eps, est_eps = None, None, None
-    per_last, per_ttm, per_est = None, None, None
-
     try:
-        url = "https://api.finmindtrade.com/api/v4/data"
         params = {
             "dataset": "TaiwanStockFinancialStatements",
             "data_id": stock_id,
-            "start_date": "2020-01-01",  # ⬅️ 至少抓3年以上
-            "token": API_TOKEN
+            "start_date": "2020-01-01",
+            "token": API_TOKEN,
         }
 
-        data = requests.get(url, params=params).json().get("data", [])
+        data = requests.get(api_url, params=params, timeout=10).json().get("data", [])
         if not data:
-            return None
+            return (None,) * 6
 
         df = pd.DataFrame(data)
         df = df[df["type"] == "EPS"]
 
         if df.empty:
-            return None
+            return (None,) * 6
 
-        # ===== 基本整理 =====
         df["date"] = pd.to_datetime(df["date"])
         df["year"] = df["date"].dt.year
         df["season"] = df["date"].dt.quarter
         df["value"] = pd.to_numeric(df["value"], errors="coerce")
 
-        # 去重（同一季只留最新）
-        df = df.sort_values("date").drop_duplicates(
-            ["year", "season"], keep="last"
-        )
+        df = df.sort_values("date").drop_duplicates(["year", "season"], keep="last")
 
-        # ===== eps_last：去年全年 =====
         last_year = datetime.now().year - 1
         df_last = df[df["year"] == last_year]
 
@@ -253,7 +228,6 @@ def get_eps_analysis(stock_id, current_price):
         if df_last["season"].nunique() >= 4:
             eps_last = round(df_last["value"].sum(), 2)
 
-        # ===== eps_ttm：最近四季 =====
         df_sorted = df.sort_values("date")
         df_ttm = df_sorted.tail(4)
 
@@ -261,17 +235,11 @@ def get_eps_analysis(stock_id, current_price):
         if len(df_ttm) == 4:
             eps_ttm = round(df_ttm["value"].sum(), 2)
 
-        # ===== eps_est：三年成長預估 =====
-        yearly_eps = (
-            df.groupby("year")["value"]
-            .sum()
-            .sort_index()
-        )
+        yearly_eps = df.groupby("year")["value"].sum().sort_index()
 
         eps_est = None
         if len(yearly_eps) >= 3:
             last_3 = yearly_eps.tail(3)
-
             start = last_3.iloc[0]
             end = last_3.iloc[-1]
             years = len(last_3) - 1
@@ -280,7 +248,6 @@ def get_eps_analysis(stock_id, current_price):
                 cagr = (end / start) ** (1 / years) - 1
                 eps_est = round(end * (1 + cagr), 2)
 
-         # ===== PER =====
         def calc_per(price, eps):
             return round(price / eps, 2) if eps and eps > 0 else None
 
@@ -291,11 +258,13 @@ def get_eps_analysis(stock_id, current_price):
         return eps_last, eps_ttm, eps_est, per_last, per_ttm, per_est
 
     except Exception as e:
-        print(f"❌ 錯誤: {e}")
+        print(f"❌ EPS error {stock_id}: {e}")
         return (None,) * 6
 
 
-# ===============================================
+# ========================
+# 4️⃣ 股利 / 殖利率
+# ========================
 def get_dividend_yield(stock_id, current_price=None):
     """
     回傳:
@@ -305,14 +274,11 @@ def get_dividend_yield(stock_id, current_price=None):
     }
     """
     try:
-        # =====================
-        # 1️⃣ 抓股利
-        # =====================
         params = {
             "dataset": "TaiwanStockDividend",
             "data_id": stock_id,
             "start_date": "2020-01-01",
-            "token": API_TOKEN
+            "token": API_TOKEN,
         }
         res = requests.get(api_url, params=params, timeout=10)
 
@@ -325,23 +291,15 @@ def get_dividend_yield(stock_id, current_price=None):
 
         df = pd.DataFrame(data)
 
-        # ===== 找現金股利欄位 =====
-        cash_cols = [
-            "CashEarningsDistribution",
-            "CashStatutorySurplus"
-        ]
+        cash_cols = ["CashEarningsDistribution", "CashStatutorySurplus"]
         exist_cols = [c for c in cash_cols if c in df.columns]
 
         if not exist_cols:
             return {"dividend": None, "yield": None}
 
-        # ===== 數值處理 =====
-        df[exist_cols] = df[exist_cols].apply(
-            pd.to_numeric, errors="coerce"
-        )
+        df[exist_cols] = df[exist_cols].apply(pd.to_numeric, errors="coerce")
         df["year"] = pd.to_numeric(df["year"], errors="coerce")
 
-        # ===== 同年加總 =====
         df_group = (
             df.groupby("year")[exist_cols]
             .sum()
@@ -350,25 +308,20 @@ def get_dividend_yield(stock_id, current_price=None):
             .sort_values("year", ascending=False)
         )
 
-        # ===== 找最近有配息 =====
         dividend = None
         for val in df_group["cash_dividend"]:
             if val and val > 0:
                 dividend = round(val, 2)
                 break
 
-        # =====================
-        # 2️⃣ 殖利率
-        # =====================
         yield_pct = None
 
-        # 👉 優先用 API（比較準）
         try:
             params2 = {
                 "dataset": "TaiwanStockPER",
                 "data_id": stock_id,
                 "start_date": "2023-01-01",
-                "token": API_TOKEN
+                "token": API_TOKEN,
             }
             res2 = requests.get(api_url, params=params2, timeout=10)
             data2 = res2.json().get("data", [])
@@ -380,49 +333,24 @@ def get_dividend_yield(stock_id, current_price=None):
                 yield_pct = latest.get("dividend_yield")
                 if yield_pct is not None:
                     yield_pct = round(float(yield_pct), 2)
-
-        except:
+        except Exception:
             pass
 
-        # 👉 fallback（自己算）
-        if yield_pct is None and dividend and current_price:
-            if current_price > 0:
-                yield_pct = round(dividend / current_price * 100, 2)
+        if yield_pct is None and dividend and current_price and current_price > 0:
+            yield_pct = round(dividend / current_price * 100, 2)
 
         return {
             "dividend": dividend,
-            "yield": yield_pct
+            "yield": yield_pct,
         }
 
     except Exception as e:
         print(f"❌ 股利/殖利率錯誤 {stock_id}: {e}")
         return {"dividend": None, "yield": None}
-    try:
-        params = {
-            "dataset": "TaiwanStockPER",
-            "data_id": stock_id,
-            "start_date": "2023-01-01",
-            "token": API_TOKEN
-        }
-        res = requests.get(api_url, params=params)
-        data = res.json().get("data", [])
-        if not data:
-            return None
-        df = pd.DataFrame(data)
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date")
-        latest = df.iloc[-1]
-        yield_pct = latest.get("dividend_yield")
-        if yield_pct is None:
-            return None
-        return round(float(yield_pct), 2)
-    except Exception as e:
-        print(f"殖利率錯誤: {stock_id}", e)
-        return None
 
 
 # ========================
-# 4️⃣ 技術指標
+# 5️⃣ 技術指標
 # ========================
 def add_indicators(df):
     try:
@@ -430,6 +358,7 @@ def add_indicators(df):
         high_max = df["max"].rolling(9).max()
         denom = (high_max - low_min).replace(0, pd.NA)
 
+        # KD
         rsv = (df["close"] - low_min) / denom * 100
         df["K"] = rsv.ewm(com=2).mean()
         df["D"] = df["K"].ewm(com=2).mean()
@@ -449,7 +378,7 @@ def add_indicators(df):
         df["BIAS18"] = (df["close"] - df["MA18"]) / df["MA18"] * 100
         df["BIAS50"] = (df["close"] - df["MA50"]) / df["MA50"] * 100
 
-        # 近90天乖離率高低點
+        # 近90天高低點
         df["BIAS6_90D_HIGH"] = df["BIAS6"].rolling(90).max()
         df["BIAS6_90D_LOW"] = df["BIAS6"].rolling(90).min()
 
@@ -465,15 +394,23 @@ def add_indicators(df):
         print(f"❌ indicator error: {e}")
         return df
 
+
 def get_MABias(df):
     """計算 MA6/18/50、最新乖離率、近90天乖離率 min/max"""
     if len(df) < 90:
         return {
-            "ma6": None, "ma18": None, "ma50": None,
-            "bias6": None, "bias18": None, "bias50": None,
-            "bias6_min": None, "bias6_max": None,
-            "bias18_min": None, "bias18_max": None,
-            "bias50_min": None, "bias50_max": None,
+            "ma6": None,
+            "ma18": None,
+            "ma50": None,
+            "bias6": None,
+            "bias18": None,
+            "bias50": None,
+            "bias6_min": None,
+            "bias6_max": None,
+            "bias18_min": None,
+            "bias18_max": None,
+            "bias50_min": None,
+            "bias50_max": None,
         }
 
     periods = [6, 18, 50]
@@ -493,22 +430,18 @@ def get_MABias(df):
 
         bias_series = (df["close"] - ma_series) / ma_series * 100
         latest_bias = bias_series.iloc[-1]
-
-        # 取近90天乖離率高低點
         bias_90 = bias_series.iloc[-90:]
 
-        stats[f"bias{p}"] = round(
-            latest_bias, 2) if pd.notna(latest_bias) else None
-        stats[f"bias{p}_min"] = round(
-            bias_90.min(), 2) if bias_90.notna().any() else None
-        stats[f"bias{p}_max"] = round(
-            bias_90.max(), 2) if bias_90.notna().any() else None
+        stats[f"bias{p}"] = round(latest_bias, 2) if pd.notna(latest_bias) else None
+        stats[f"bias{p}_min"] = round(bias_90.min(), 2) if bias_90.notna().any() else None
+        stats[f"bias{p}_max"] = round(bias_90.max(), 2) if bias_90.notna().any() else None
 
     return stats
 
-#   margin_score（毛利品質）
 
-
+# ========================
+# 6️⃣ 評分
+# ========================
 def calc_margin_score(gross, op, net):
     score = 0
     if gross is not None:
@@ -520,7 +453,6 @@ def calc_margin_score(gross, op, net):
     return round(score, 2)
 
 
-#   eps_score（成長性）
 def calc_eps_score(eps_ttm, eps_est):
     if eps_ttm is None or eps_est is None or eps_ttm <= 0:
         return 0
@@ -528,7 +460,6 @@ def calc_eps_score(eps_ttm, eps_est):
     return round(growth, 2)
 
 
-#   trend_score（動能）
 def calc_trend_score(qoq_g, yoy_g, qoq_n, yoy_n):
     vals = [qoq_g, yoy_g, qoq_n, yoy_n]
     vals = [v for v in vals if v is not None]
@@ -536,15 +467,14 @@ def calc_trend_score(qoq_g, yoy_g, qoq_n, yoy_n):
         return 0
     return round(sum(vals) / len(vals), 2)
 
-# ========================
-# 5️⃣ 單支股票分析
-# ========================
 
-
+# ========================
+# 7️⃣ 單支股票分析
+# ========================
 def process_stock(s):
     try:
         df = get_stock_data(s["stock_id"])
-        if df.empty or len(df) < 60:
+        if df.empty or len(df) < 90:
             return None
 
         df = add_indicators(df)
@@ -563,7 +493,7 @@ def process_stock(s):
         profit_res = get_profit_ratio(s["stock_id"]) or {
             "current": {},
             "qoq": {},
-            "yoy_diff": {}
+            "yoy_diff": {},
         }
         cur_g, qoq_g, yoy_g = extract_metric(profit_res, "gross")
         cur_o, qoq_o, yoy_o = extract_metric(profit_res, "op")
@@ -572,7 +502,6 @@ def process_stock(s):
         yield_pct = get_dividend_yield(s["stock_id"], latest["close"])
         ma_stats = get_MABias(df)
 
-        # ===== 把 ma_stats 轉成 Python 原生型別 =====
         safe_ma_stats = {}
         for k2, v2 in ma_stats.items():
             if v2 is None or pd.isna(v2):
@@ -598,8 +527,10 @@ def process_stock(s):
 
         # ===== 月線買點 =====
         ma18_break = bool(
-            ma18 is not None and prev_ma18 is not None and
-            prev_close <= prev_ma18 and close > ma18
+            ma18 is not None
+            and prev_ma18 is not None
+            and prev_close <= prev_ma18
+            and close > ma18
         )
 
         # ===== 成交量條件 =====
@@ -617,8 +548,8 @@ def process_stock(s):
             )
 
         # ===== 布林位置 =====
-        bb_upper = latest["BB_upper"]
-        bb_lower = latest["BB_lower"]
+        bb_upper = latest["BB_upper"] if "BB_upper" in latest else None
+        bb_lower = latest["BB_lower"] if "BB_lower" in latest else None
         bb_pct = None
         if pd.notna(bb_upper) and pd.notna(bb_lower) and bb_upper != bb_lower:
             bb_pct = round((close - bb_lower) / (bb_upper - bb_lower) * 100, 1)
@@ -646,7 +577,7 @@ def process_stock(s):
         if entry_note:
             signal_tags.append(entry_note)
 
-        # ===== 最終訊號：放寬條件 =====
+        # ===== 最終訊號 =====
         buy_score = 0
         if kd_buy:
             buy_score += 1
@@ -675,14 +606,14 @@ def process_stock(s):
         eps_score = calc_eps_score(eps_res[1], eps_res[2])
         trend_score = calc_trend_score(qoq_g, yoy_g, qoq_n, yoy_n)
         score = round(
-            margin_score * 0.4 +
-            eps_score * 0.3 +
-            trend_score * 0.3,
-            2
+            margin_score * 0.4
+            + eps_score * 0.3
+            + trend_score * 0.3,
+            2,
         )
 
         return {
-            "name": s["name"][:3],
+            "name": s["name"],
             "code": s["stock_id"],
             "price": float(round(close, 2)),
             "chg": float(round(chg, 2)),
@@ -701,33 +632,36 @@ def process_stock(s):
             "net_margin_qoq": float(qoq_n) if qoq_n is not None else None,
             "net_margin_yoy_diff": float(yoy_n) if yoy_n is not None else None,
 
-            "eps_Y": float(eps_res[0]) if eps_res[0] is not None else "-",
-            "eps_ttm": float(eps_res[1]) if eps_res[1] is not None else "-",
-            "eps_est": float(eps_res[2]) if eps_res[2] is not None else "-",
+            "eps_Y": float(eps_res[0]) if eps_res[0] is not None else None,
+            "eps_ttm": float(eps_res[1]) if eps_res[1] is not None else None,
+            "eps_est": float(eps_res[2]) if eps_res[2] is not None else None,
+
             "yield": yield_pct,
-            "per_Y": float(eps_res[3]) if eps_res[3] is not None else "-",
-            "per_ttm": float(eps_res[4]) if eps_res[4] is not None else "-",
-            "per_est": float(eps_res[5]) if eps_res[5] is not None else "-",
+
+            "per_Y": float(eps_res[3]) if eps_res[3] is not None else None,
+            "per_ttm": float(eps_res[4]) if eps_res[4] is not None else None,
+            "per_est": float(eps_res[5]) if eps_res[5] is not None else None,
 
             "k": float(round(k, 1)),
             "d": float(round(d, 1)),
-            "ma18": float(round(ma18, 2)) if ma18 is not None else "-",
+            "ma18": float(round(ma18, 2)) if ma18 is not None else None,
             "ma18_break": bool(ma18_break),
             "kd_buy": bool(kd_buy),
             "bb_pct": float(bb_pct) if bb_pct is not None else None,
 
-            "volume": int(round(volume, 0)) if pd.notna(volume) else "-",
-            "prev_volume": int(round(prev_volume, 0)) if pd.notna(prev_volume) else "-",
+            "volume": int(round(volume, 0)) if pd.notna(volume) else None,
+            "prev_volume": int(round(prev_volume, 0)) if pd.notna(prev_volume) else None,
             "volume_ratio": float(volume_ratio) if volume_ratio is not None else None,
             "volume_add": int(round(volume_add, 0)) if volume_add is not None else None,
             "volume_ok": bool(volume_ok),
 
             **safe_ma_stats,
+
             "sig": int(sig),
             "score": float(score),
             "strategy": strategy,
             "signal_text": signal_text,
-            "entry_note": entry_note
+            "entry_note": entry_note,
         }
 
     except Exception as e:
@@ -736,10 +670,8 @@ def process_stock(s):
 
 
 # ========================
-# 6️⃣ 全部股票
+# 8️⃣ 全部股票
 # ========================
-
-
 def get_full_stock_analysis(stock_list):
     results = []
     for s in stock_list:
