@@ -56,7 +56,8 @@ def get_stock_data(stock_id):
         else:
             df["volume"] = None
 
-        df = df.dropna(subset=["open", "close", "max", "min"]).sort_values("date")
+        df = df.dropna(subset=["open", "close", "max",
+                       "min"]).sort_values("date")
         return df
 
     except Exception as e:
@@ -423,6 +424,8 @@ def get_dividend_yield(stock_id, current_price=None):
 # ========================
 # 4️⃣ 技術指標
 # ========================
+
+
 def add_indicators(df):
     try:
         low_min = df["min"].rolling(9).min()
@@ -433,27 +436,39 @@ def add_indicators(df):
         df["K"] = rsv.ewm(com=2).mean()
         df["D"] = df["K"].ewm(com=2).mean()
 
-        # 月線 / 均線
+        # 均線
         df["MA5"] = df["close"].rolling(5).mean()
-        df["MA10"] = df["close"].rolling(10).mean()
-        df["MA20"] = df["close"].rolling(20).mean()   # 月線
-        df["MA60"] = df["close"].rolling(60).mean()
+        df["MA18"] = df["close"].rolling(18).mean()
+        df["MA50"] = df["close"].rolling(50).mean()
 
         # 布林
-        std = df["close"].rolling(20).std()
-        df["BB_upper"] = df["MA20"] + 2 * std
-        df["BB_lower"] = df["MA20"] - 2 * std
+        std = df["close"].rolling(18).std()
+        df["BB_upper"] = df["MA18"] + 2 * std
+        df["BB_lower"] = df["MA18"] - 2 * std
+
+        # ===== 乖離率 =====
+        df["BIAS5"] = (df["close"] - df["MA6"]) / df["MA5"] * 100
+        df["BIAS18"] = (df["close"] - df["MA18"]) / df["MA18"] * 100
+        df["BIAS50"] = (df["close"] - df["MA50"]) / df["MA50"] * 100
+
+        # ===== 近90天乖離率高低點 =====
+        df["BIAS5_90D_HIGH"] = df["BIAS6"].rolling(90).max()
+        df["BIAS5_90D_LOW"] = df["BIAS6"].rolling(90).min()
+
+        df["BIAS18_90D_HIGH"] = df["BIAS18"].rolling(90).max()
+        df["BIAS18_90D_LOW"] = df["BIAS18"].rolling(90).min()
+
+        df["BIAS50_90D_HIGH"] = df["BIAS50"].rolling(90).max()
+        df["BIAS50_90D_LOW"] = df["BIAS50"].rolling(90).min()
 
         return df
+
     except Exception as e:
         print(f"❌ indicator error: {e}")
         return df
 
-
-# 均線及乖離率=========================
 def get_MABias(df):
     """  計算均線值與對應的乖離率    傳入: 包含 close 欄位的 DataFrame    回傳: 包含 ma 與 bias 的字典 """
-    # 確保資料量足夠計算最大窗格 (50)
     if len(df) < 50:
         return {
             "ma6": None, "ma18": None, "ma50": None,
@@ -461,17 +476,13 @@ def get_MABias(df):
         }
 
     latest_close = df["close"].iloc[-1]
-
-    # 定義要計算的週期
     periods = [6, 18, 50]
     stats = {}
 
     for p in periods:
-        # 計算均線 (取最後一筆)
         ma_value = df["close"].rolling(p).mean().iloc[-1]
         stats[f"ma{p}"] = round(ma_value, 2)
 
-        # 計算乖離率
         if ma_value == 0 or pd.isna(ma_value):
             stats[f"bias{p}"] = None
         else:
@@ -559,8 +570,8 @@ def process_stock(s):
         prev_k = prev["K"] if pd.notna(prev["K"]) else 50
         prev_d = prev["D"] if pd.notna(prev["D"]) else 50
 
-        ma20 = latest["MA20"] if pd.notna(latest["MA20"]) else None
-        prev_ma20 = prev["MA20"] if pd.notna(prev["MA20"]) else None
+        ma18 = latest["MA18"] if pd.notna(latest["MA18"]) else None
+        prev_ma18 = prev["MA18"] if pd.notna(prev["MA18"]) else None
 
         close = latest["close"]
         prev_close = prev["close"]
@@ -570,9 +581,9 @@ def process_stock(s):
         kd_low_buy = bool(kd_buy and k < 35)
 
         # ===== 月線買點 =====
-        ma20_break = bool(
-            ma20 is not None and prev_ma20 is not None and
-            prev_close <= prev_ma20 and close > ma20
+        ma18_break = bool(
+            ma18 is not None and prev_ma18 is not None and
+            prev_close <= prev_ma18 and close > ma18
         )
 
         # ===== 成交量條件 =====
@@ -602,7 +613,7 @@ def process_stock(s):
         if kd_buy:
             signal_tags.append("KD買點")
 
-        if ma20_break:
+        if ma18_break:
             signal_tags.append("站上月線")
 
         if volume_ok:
@@ -611,9 +622,9 @@ def process_stock(s):
             signal_tags.append("量不足")
 
         entry_note = ""
-        if kd_low_buy and ma20_break:
+        if kd_low_buy and ma18_break:
             entry_note = "抄底"
-        elif ma20_break and chgPct >= 3:
+        elif ma18_break and chgPct >= 3:
             entry_note = "追漲"
 
         if entry_note:
@@ -623,7 +634,7 @@ def process_stock(s):
         buy_score = 0
         if kd_buy:
             buy_score += 1
-        if ma20_break:
+        if ma18_break:
             buy_score += 1
         if volume_ok:
             buy_score += 1
@@ -684,8 +695,8 @@ def process_stock(s):
 
             "k": float(round(k, 1)),
             "d": float(round(d, 1)),
-            "ma20": float(round(ma20, 2)) if ma20 is not None else "-",
-            "ma20_break": bool(ma20_break),
+            "ma18": float(round(ma18, 2)) if ma18 is not None else "-",
+            "ma18_break": bool(ma18_break),
             "kd_buy": bool(kd_buy),
             "bb_pct": float(bb_pct) if bb_pct is not None else None,
 

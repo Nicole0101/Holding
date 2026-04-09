@@ -369,9 +369,9 @@ tbody td:first-child {
             <th class="col-lg" data-key="per_ttm">本益比</th>
             <th data-key="k">KD</th>
             <th class="col-md" data-key="bb_pct">布林</th>
-            <th class="col-lg" data-key="bias6">Bias6</th>
-            <th class="col-lg" data-key="bias18">Bias18</th>
-            <th class="col-lg" data-key="bias50">Bias50</th>
+            <th class="col-lg" data-key="bias6">Bias6<br><small>cur / min / max</small></th>
+            <th class="col-lg" data-key="bias18">Bias18<br><small>cur / min / max</small></th>
+            <th class="col-lg" data-key="bias50">Bias50<br><small>cur / min / max</small></th>
             <th class="col-md" data-key="ma20">月線</th>
             <th class="col-md" data-key="volume">成交量</th>
             <th class="col-md" data-key="volume_ratio">量增%</th>
@@ -475,9 +475,23 @@ function renderRow(s) {
       </div>
     </td>
 
-    <td class="col-lg ${distClass(s.bias6)}">${s.bias6 ?? ""}%</td>
-    <td class="col-lg ${distClass(s.bias18)}">${s.bias18 ?? ""}%</td>
-    <td class="col-lg ${distClass(s.bias50)}">${s.bias50 ?? ""}%</td>
+    <td class="col-lg ${distClass(s.bias6)}">
+      <div>${s.bias6 ?? "-"}%</div>
+      <small class="text-green">min: ${s.bias6_min ?? "-"}%</small><br>
+      <small class="text-red">max: ${s.bias6_max ?? "-"}%</small>
+    </td>
+
+    <td class="col-lg ${distClass(s.bias18)}">
+      <div>${s.bias18 ?? "-"}%</div>
+      <small class="text-green">min: ${s.bias18_min ?? "-"}%</small><br>
+      <small class="text-red">max: ${s.bias18_max ?? "-"}%</small>
+    </td>
+
+    <td class="col-lg ${distClass(s.bias50)}">
+      <div>${s.bias50 ?? "-"}%</div>
+      <small class="text-green">min: ${s.bias50_min ?? "-"}%</small><br>
+      <small class="text-red">max: ${s.bias50_max ?? "-"}%</small>
+    </td>
 
     <td class="col-md">
       ${s.ma20 ?? "-"}<br>
@@ -529,6 +543,22 @@ function renderMobileCard(s) {
         <div class="stock-label">KD</div>
         <div class="stock-value">${s.k ?? "-"} / ${s.d ?? "-"}</div>
       </div>
+
+      <div class="stock-item">
+        <div class="stock-label">Bias6</div>
+        <div class="stock-value">${s.bias6 ?? "-"}% / min ${s.bias6_min ?? "-"} / max ${s.bias6_max ?? "-"}</div>
+      </div>
+
+      <div class="stock-item">
+        <div class="stock-label">Bias18</div>
+        <div class="stock-value">${s.bias18 ?? "-"}% / min ${s.bias18_min ?? "-"} / max ${s.bias18_max ?? "-"}</div>
+      </div>
+
+      <div class="stock-item">
+        <div class="stock-label">Bias50</div>
+        <div class="stock-value">${s.bias50 ?? "-"}% / min ${s.bias50_min ?? "-"} / max ${s.bias50_max ?? "-"}</div>
+      </div>  
+
       <div class="stock-item">
         <div class="stock-label">月線</div>
         <div class="stock-value">${s.ma20 ?? "-"} ${s.ma20_break ? " / 站上月線" : ""}</div>
