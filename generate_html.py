@@ -1,5 +1,5 @@
 import pandas as pd
-import yaml
+import config
 from datetime import datetime, timedelta
 from jinja2 import Template
 import os
@@ -58,14 +58,10 @@ def build_strings(data):
 # ========================
 def main():
     try:
-        with open("config.yml", "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
-
-        report_type = config["REPORT_TYPE"]
-        csv_file = config["CSV_FILE"]
-        report_title = config["REPORT_TITLE"]
-        output_file = config["OUTPUT_FILE"]
-
+        report_type = config.REPORT_TYPE
+        csv_file = config.CSV_FILE
+        report_title = config.REPORT_TITLE
+        output_file = config.OUTPUT_FILE
         df = pd.read_csv(csv_file, sep="\t", encoding="utf-8-sig")
 
         stock_list = df.rename(
