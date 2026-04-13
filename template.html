@@ -102,11 +102,6 @@
       background-clip: padding-box;
     }
 
-    .name {
-      text-align: left;
-      font-weight: bold;
-    }
-
     .up {
       color: #f85149;
     }
@@ -139,7 +134,7 @@
     }
 
     .signal-cell {
-      min-width: 140px;
+      min-width: 160px;
       white-space: normal;
       line-height: 1.4;
     }
@@ -203,6 +198,18 @@
       display: flex;
       justify-content: center;
       gap: 6px;
+    }
+
+    .metric-2line {
+      line-height: 1.4;
+    }
+
+    .metric-note {
+      display: block;
+      margin-top: 2px;
+      font-size: 10px;
+      color: #8b949e;
+      white-space: normal;
     }
 
     .text-red {
@@ -329,11 +336,11 @@
 </head>
 
 <body>
-
   <div class="container">
     <h2>{{report_title}}</h2>
     <p>{{ report_subtitle }}</p>
     <p>產生時間：{{ generated_time }}</p>
+
     <div class="summary">
       <div class="box buy"><b id="buyCount"></b><br>買入</div>
       <div class="box sell"><b id="sellCount"></b><br>出貨</div>
@@ -346,25 +353,24 @@
         <table>
           <thead>
             <tr>
-              <th data-key="name">名稱</th>
-              <th data-key="code">代碼</th>
+              <th data-key="code">代碼<br><small>名稱</small></th>
               <th data-key="price">價格</th>
               <th data-key="chg">漲跌</th>
               <th data-key="chgPct">漲跌%</th>
               <th class="col-md" data-key="amp">震幅%</th>
-              <th class="col-lg" data-key="eps_Y">去年EPS</th>
-              <th class="col-lg" data-key="eps_est">估EPS</th>
-              <th class="col-lg" data-key="gross_margin">毛利率%<br><small>QoQ YoY</small></th>
-              <th class="col-lg" data-key="operating_margin">營益率%<br><small>QoQ YoY</small></th>
-              <th class="col-lg" data-key="net_margin">淨利率%<br><small>QoQ YoY</small></th>
+              <th class="col-lg" data-key="eps_Y">EPS<br><small>去年/預估</small></th>
+              <th class="col-lg" data-key="gross_margin">毛利率%<br><small>QoQ / YoY</small></th>
+              <th class="col-lg" data-key="operating_margin">營益率%<br><small>QoQ / YoY</small></th>
+              <th class="col-lg" data-key="net_margin">淨利率%<br><small>QoQ / YoY</small></th>
               <th class="col-md" data-key="score">評分</th>
-              <th class="col-md" data-key="yield">殖利率</th>
-              <th class="col-lg" data-key="per_ttm">本益比</th>
+              <th class="col-md" data-key="yield_value">殖利率</th>
+              <th class="col-lg" data-key="per_latest">PER<br><small>90天低/高</small></th>
+              <th class="col-lg" data-key="pbr_latest">PBR<br><small>90天低/高</small></th>
               <th data-key="k">KD</th>
               <th class="col-md" data-key="bb_pct">布林</th>
-              <th class="col-lg" data-key="bias6">Bias6<br><small>min / max</small></th>
-              <th class="col-lg" data-key="bias18">Bias18<br><small>min / max</small></th>
-              <th class="col-lg" data-key="bias50">Bias50<br><small>min / max</small></th>
+              <th class="col-lg" data-key="bias6">Bias6<br><small>低/高</small></th>
+              <th class="col-lg" data-key="bias18">Bias18<br><small>低/高</small></th>
+              <th class="col-lg" data-key="bias50">Bias50<br><small>低/高</small></th>
               <th class="col-md" data-key="ma18">月線</th>
               <th class="col-md" data-key="volume">成交量</th>
               <th class="col-md" data-key="volume_ratio">量增%</th>
@@ -393,6 +399,15 @@
       return isNil(v) ? "-" : `${v}${suffix}`;
     }
 
+    function getYieldValue(s) {
+      const raw = s?.yield;
+      if (raw && typeof raw === "object") {
+        const y = raw.yield;
+        return isNil(y) ? null : y;
+      }
+      return isNil(raw) ? null : raw;
+    }
+
     function renderMetric(value, qoq, yoy) {
       const arrow = (v) => {
         if (isNil(v)) return "";
@@ -413,6 +428,14 @@
         </div>`;
     }
 
+    function renderRangeMetric(current, low, high) {
+      return `
+        <div class="metric metric-2line">
+          <div class="metric-main">${fmt(current)}</div>
+          <small class="metric-note">${fmt(low)} / ${fmt(high)}</small>
+        </div>`;
+    }
+
     function distClass(val) {
       if (isNil(val) || val === "") return "";
       return Number(val) > 0 ? "up" : "dn";
@@ -424,21 +447,20 @@
       const chgSign = chgPct >= 0 ? "+" : "";
       const sigClass = { 1: "up", 0: "watch", "-1": "dn" };
       const sigLabel = { 1: "買入", 0: "觀望", "-1": "賣出" };
+      const yieldValue = getYieldValue(s);
 
       return `
         <tr>
-          <td class="name">${s.name ?? ""}</td>
-          <td>${s.code ?? ""}</td>
+          <td>${s.code ?? ""}<br><small>${fmt(s.name)}</small></td>
           <td>${fmt(s.price)}</td>
           <td class="${chgClass}">${chgSign}${fmt(s.chg)}</td>
           <td class="${chgClass}">${chgSign}${fmt(s.chgPct, "%")}</td>
-
           <td class="col-md">${fmt(s.amp, "%")}</td>
-          <td class="col-lg">${fmt(s.eps_Y)}</td>
 
           <td class="col-lg">
-            <small>TTM:</small> ${fmt(s.eps_ttm)} <br>
-            <small>預估:</small> ${fmt(s.eps_est)}
+            <div>${fmt(s.eps_Y)}</div>
+            <small>TTM: ${fmt(s.eps_ttm)}</small><br>
+            <small>預估: ${fmt(s.eps_est)}</small>
           </td>
 
           <td class="col-lg">${renderMetric(s.gross_margin, s.gross_margin_qoq, s.gross_margin_yoy_diff)}</td>
@@ -446,57 +468,47 @@
           <td class="col-lg">${renderMetric(s.net_margin, s.net_margin_qoq, s.net_margin_yoy_diff)}</td>
 
           <td class="col-md">${fmt(s.score)}</td>
-          <td class="col-md">${fmt(s.yield?.yield ?? s.yield, "%")}</td>
+          <td class="col-md">${fmt(yieldValue, "%")}</td>
 
-          <td class="col-lg">
-            <small>TTM:</small> ${fmt(s.per_ttm)} <br>
-            <small>預估:</small> ${fmt(s.per_est)}
-          </td>
+          <td class="col-lg">${renderRangeMetric(s.per_latest, s.per_90d_low, s.per_90d_high)}</td>
+          <td class="col-lg">${renderRangeMetric(s.pbr_latest, s.pbr_90d_low, s.pbr_90d_high)}</td>
 
-          <td>
-            ${fmt(s.k)}/${fmt(s.d)}
-          </td>
-
-          <td class="col-md">
-            ${fmt(s.bb_pct, "%")}
-          </td>
+          <td>${fmt(s.k)}/${fmt(s.d)}</td>
+          <td class="col-md">${fmt(s.bb_pct, "%")}</td>
 
           <td class="col-lg ${distClass(s.bias6)}">
             <div>${fmt(s.bias6, "%")}</div>
-            <small class="text-green"> ${fmt(s.bias6_min, "%")}</small>
+            <small class="text-green">${fmt(s.bias6_min, "%")}</small>
             &nbsp;&nbsp;
-            <small class="text-red"> ${fmt(s.bias6_max, "%")}</small>
+            <small class="text-red">${fmt(s.bias6_max, "%")}</small>
           </td>
 
           <td class="col-lg ${distClass(s.bias18)}">
             <div>${fmt(s.bias18, "%")}</div>
-            <small class="text-green"> ${fmt(s.bias18_min, "%")}</small>
+            <small class="text-green">${fmt(s.bias18_min, "%")}</small>
             &nbsp;&nbsp;
-            <small class="text-red"> ${fmt(s.bias18_max, "%")}</small>
+            <small class="text-red">${fmt(s.bias18_max, "%")}</small>
           </td>
 
           <td class="col-lg ${distClass(s.bias50)}">
             <div>${fmt(s.bias50, "%")}</div>
-            <small class="text-green"> ${fmt(s.bias50_min, "%")}</small>
+            <small class="text-green">${fmt(s.bias50_min, "%")}</small>
             &nbsp;&nbsp;
-            <small class="text-red"> ${fmt(s.bias50_max, "%")}</small>
+            <small class="text-red">${fmt(s.bias50_max, "%")}</small>
           </td>
 
           <td class="col-md">
             ${fmt(s.ma18)}<br>
-            <small class="${s.ma18_break ? 'text-red' : ''}">
-              ${s.ma18_break ? '站上月線' : ''}
-            </small>
+            <small class="${s.ma18_break ? 'text-red' : ''}">${s.ma18_break ? '站上月線' : ''}</small>
           </td>
 
           <td class="col-md">
             ${fmt(s.volume)} 張<br>
-            <small>昨:${fmt(s.prev_volume)}</small>
+            <small>昨: ${fmt(s.prev_volume)}</small>
           </td>
 
           <td class="col-md ${(s.volume_ratio ?? 0) > 0 ? 'up' : 'dn'}">
-            ${fmt(s.volume_ratio, "%")}
-            <br>
+            ${fmt(s.volume_ratio, "%")}<br>
             <small>${fmt(s.volume_add)} 張</small>
           </td>
 
@@ -518,6 +530,7 @@
       const chgSign = chgPct >= 0 ? "+" : "";
       const sigClass = { 1: "up", 0: "watch", "-1": "dn" };
       const sigLabel = { 1: "買入", 0: "觀望", "-1": "賣出" };
+      const yieldValue = getYieldValue(s);
 
       return `
         <div class="stock-card">
@@ -530,6 +543,16 @@
           </div>
 
           <div class="stock-grid">
+            <div class="stock-item">
+              <div class="stock-label">PER</div>
+              <div class="stock-value">${fmt(s.per_latest)}<br><small>${fmt(s.per_90d_low)} / ${fmt(s.per_90d_high)}</small></div>
+            </div>
+
+            <div class="stock-item">
+              <div class="stock-label">PBR</div>
+              <div class="stock-value">${fmt(s.pbr_latest)}<br><small>${fmt(s.pbr_90d_low)} / ${fmt(s.pbr_90d_high)}</small></div>
+            </div>
+
             <div class="stock-item">
               <div class="stock-label">KD</div>
               <div class="stock-value">${fmt(s.k)} / ${fmt(s.d)}</div>
@@ -572,7 +595,7 @@
 
             <div class="stock-item">
               <div class="stock-label">殖利率</div>
-              <div class="stock-value">${fmt(s.yield?.yield ?? s.yield, "%")}</div>
+              <div class="stock-value">${fmt(yieldValue, "%")}</div>
             </div>
           </div>
 
@@ -602,10 +625,12 @@
           return s.code ?? "";
         case "sig":
           return Number(s.sig ?? -999999);
-        case "yield":
-          return Number(s.yield?.yield ?? s.yield ?? -999999);
+        case "yield_value":
+          return Number(getYieldValue(s) ?? -999999);
         case "score":
-          return Number(s.score ?? -999999);
+        case "per_latest":
+        case "pbr_latest":
+          return Number(s[key] ?? -999999);
         default: {
           const value = s[key];
           if (isNil(value) || value === "") return -999999;
@@ -678,7 +703,6 @@
     document.getElementById("watchCount").innerText = watch;
     document.getElementById("holdCount").innerText = hold;
   </script>
-
 </body>
 
 </html>

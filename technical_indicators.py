@@ -1,0 +1,80 @@
+import pandas as pd
+
+
+def add_indicators(df):
+    try:
+        low_min = df['min'].rolling(9).min()
+        high_max = df['max'].rolling(9).max()
+        denom = (high_max - low_min).replace(0, pd.NA)
+
+        rsv = (df['close'] - low_min) / denom * 100
+        df['K'] = rsv.ewm(com=2).mean()
+        df['D'] = df['K'].ewm(com=2).mean()
+
+        df['MA6'] = df['close'].rolling(6).mean()
+        df['MA18'] = df['close'].rolling(18).mean()
+        df['MA50'] = df['close'].rolling(50).mean()
+
+        std = df['close'].rolling(18).std()
+        df['BB_upper'] = df['MA18'] + 2 * std
+        df['BB_lower'] = df['MA18'] - 2 * std
+
+        df['BIAS6'] = (df['close'] - df['MA6']) / df['MA6'] * 100
+        df['BIAS18'] = (df['close'] - df['MA18']) / df['MA18'] * 100
+        df['BIAS50'] = (df['close'] - df['MA50']) / df['MA50'] * 100
+
+        df['BIAS6_90D_HIGH'] = df['BIAS6'].rolling(90).max()
+        df['BIAS6_90D_LOW'] = df['BIAS6'].rolling(90).min()
+        df['BIAS18_90D_HIGH'] = df['BIAS18'].rolling(90).max()
+        df['BIAS18_90D_LOW'] = df['BIAS18'].rolling(90).min()
+        df['BIAS50_90D_HIGH'] = df['BIAS50'].rolling(90).max()
+        df['BIAS50_90D_LOW'] = df['BIAS50'].rolling(90).min()
+
+        return df
+    except Exception as e:
+        print(f'❌ indicator error: {e}')
+        return df
+
+
+def get_MABias(df):
+    if len(df) < 90:
+        return {
+            'ma6': None, 'ma18': None, 'ma50': None,
+            'bias6': None, 'bias18': None, 'bias50': None,
+            'bias6_min': None, 'bias6_max': None,
+            'bias18_min': None, 'bias18_max': None,
+            'bias50_min': None, 'bias50_max': None,
+        }
+
+    periods = [6, 18, 50]
+    stats = {}
+
+    for p in periods:
+        ma_series = df['close'].rolling(p).mean()
+        ma_value = ma_series.iloc[-1]
+        stats[f'ma{p}'] = round(ma_value, 2) if pd.notna(ma_value) else None
+
+        if ma_value == 0 or pd.isna(ma_value):
+            stats[f'bias{p}'] = None
+            stats[f'bias{p}_min'] = None
+            stats[f'bias{p}_max'] = None
+            continue
+
+        bias_series = (df['close'] - ma_series) / ma_series * 100
+        latest_bias = bias_series.iloc[-1]
+        bias_90 = bias_series.iloc[-90:]
+
+        stats[f'bias{p}'] = round(
+            latest_bias, 2) if pd.notna(latest_bias) else None
+        stats[f'bias{p}_min'] = round(
+            bias_90.min(), 2) if bias_90.notna().any() else None
+        stats[f'bias{p}_max'] = round(
+            bias_90.max(), 2) if bias_90.notna().any() else None
+
+    return stats
+
+
+def safe_pos(value, low, high):
+    if value is None or low is None or high is None or high == low:
+        return None
+    return (value - low) / (high - low)
