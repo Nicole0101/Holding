@@ -40,7 +40,15 @@ def process_stock(s):
         cur_o, qoq_o, yoy_o = extract_metric(profit_res, 'op')
         cur_n, qoq_n, yoy_n = extract_metric(profit_res, 'net')
 
-        yield_pct = get_dividend_yield(s['stock_id'], latest['close'])
+        yield_raw = get_dividend_yield(s['stock_id'], latest['close'])
+        dividend = None
+        yield_value = None      
+        if isinstance(yield_raw, dict):
+            dividend = yield_raw.get('dividend')
+            yield_value = yield_raw.get('yield')
+        elif isinstance(yield_raw, (int, float)):
+            yield_value = float(yield_raw)
+            
         per_pbr_stats = get_per_pbr_90d_stats(s['stock_id'], days=90)
         ma_stats = get_MABias(df)
 
@@ -168,7 +176,8 @@ def process_stock(s):
             'eps_ttm': float(eps_res[1]) if eps_res[1] is not None else None,
             'eps_est': float(eps_res[2]) if eps_res[2] is not None else None,
 
-            'yield': yield_pct,
+            'dividend': float(dividend) if dividend is not None else None,
+            'yield_value': float(yield_value) if yield_value is not None else None,
 
             'per_Y': float(eps_res[3]) if eps_res[3] is not None else None,
             'per_latest': per_pbr_stats.get('per'),
