@@ -1,6 +1,5 @@
 import pandas as pd
-
-from data_sources import get_stock_data
+from data_sources import get_stock_data, get_per_pbr_90d_stats
 from financial_analysis import (
     calc_eps_score,
     calc_margin_score,
@@ -42,6 +41,7 @@ def process_stock(s):
         cur_n, qoq_n, yoy_n = extract_metric(profit_res, 'net')
 
         yield_pct = get_dividend_yield(s['stock_id'], latest['close'])
+        per_pbr_stats = get_per_pbr_90d_stats(s["stock_id"], days=90)
         ma_stats = get_MABias(df)
 
         safe_ma_stats = {}
@@ -168,6 +168,12 @@ def process_stock(s):
             'per_Y': float(eps_res[3]) if eps_res[3] is not None else None,
             'per_ttm': float(eps_res[4]) if eps_res[4] is not None else None,
             'per_est': float(eps_res[5]) if eps_res[5] is not None else None,
+            "per_latest": per_pbr_stats.get("per"),
+            "per_90d_high": per_pbr_stats.get("per_90d_high"),
+            "per_90d_low": per_pbr_stats.get("per_90d_low"),
+            "pbr_latest": per_pbr_stats.get("pbr"),
+            "pbr_90d_high": per_pbr_stats.get("pbr_90d_high"),
+            "pbr_90d_low": per_pbr_stats.get("pbr_90d_low"),
             'k': float(round(k, 1)),
             'd': float(round(d, 1)),
             'ma18': float(round(ma18, 2)) if ma18 is not None else None,

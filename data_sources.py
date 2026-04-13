@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import requests
@@ -29,6 +29,8 @@ def get_stock_data(stock_id):
 
         if 'data' not in data or len(data['data']) == 0:
             return pd.DataFrame()
+        
+
 
         df = pd.DataFrame(data['data'])
 
@@ -116,3 +118,102 @@ def get_per_raw(stock_id):
         return res.json().get('data', [])
     except Exception:
         return []
+
+
+def get_per_pbr_90d_stats(stock_id, days=90):
+    """
+    回傳：
+    {
+        "per": 最新PER,
+        "per_90d_high": 90天PER最高,
+        "per_90d_low": 90天PER最低,
+        "pbr": 最新PBR,
+        "pbr_90d_high": 90天PBR最高,
+        "pbr_90d_low": 90天PBR最低,
+    }
+    """
+    try:
+        start_date = (datetime.now() - timedelta(days=days * 2)).strftime("%Y-%m-%d")
+        # 抓寬一點，避免遇到非交易日不夠 90 筆
+
+        params = {
+            "dataset": "TaiwanStockPER",
+            "data_id": str(stock_id),
+            "start_date": start_date,
+            "token": API_TOKEN,
+        }
+
+        res = requests.get(API_URL, params=params, timeout=10)
+        if res.status_code != 200:
+            return {
+                "per": None,
+                "per_90d_high": None,
+                "per_90d_low": None,
+                "pbr": None,
+                "pbr_90d_high": None,
+                "pbr_90d_low": None,
+            }
+
+        data = res.json().get("data", [])
+        if not data:
+            return {
+                "per": None,
+                "per_90d_high": None,
+                "per_90d_low": None,
+                "pbr": None,
+                "pbr_90d_high": None,
+                "pbr_90d_low": None,
+            }
+
+        df = pd.DataFrame(data)
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date").tail(days).copy()
+
+        # 用候選欄位名提高相容性
+        per_col = next(
+            (c for c in ["price_to_earning_ratio", "PER", "per"] if c in df.columns),
+            None
+        )
+        pbr_col = next(
+            (c for c in ["price_book_ratio", "PBR", "pbr"] if c in df.columns),
+            None
+        )
+
+        if per_col:
+            df[per_col] = pd.to_numeric(df[per_col], errors="coerce")
+            latest_per = df[per_col].iloc[-1] if not df.empty else None
+            per_high = df[per_col].max()
+            per_low = df[per_col].min()
+        else:
+            latest_per = per_high = per_low = None
+
+        if pbr_col:
+            df[pbr_col] = pd.to_numeric(df[pbr_col], errors="coerce")
+            latest_pbr = df[pbr_col].iloc[-1] if not df.empty else None
+            pbr_high = df[pbr_col].max()
+            pbr_low = df[pbr_col].min()
+        else:
+            latest_pbr = pbr_high = pbr_low = None
+
+        def safe_round(v):
+            return round(float(v), 2) if pd.notna(v) else None
+
+        return {
+            "per": safe_round(latest_per),
+            "per_90d_high": safe_round(per_high),
+            "per_90d_low": safe_round(per_low),
+            "pbr": safe_round(latest_pbr),
+            "pbr_90d_high": safe_round(pbr_high),
+            "pbr_90d_low": safe_round(pbr_low),
+        }
+
+    except Exception as e:
+        print(f"❌ PER/PBR 90D error {stock_id}: {e}")
+        return {
+            "per": None,
+            "per_90d_high": None,
+            "per_90d_low": None,
+            "pbr": None,
+            "pbr_90d_high": None,
+            "pbr_90d_low": None,
+        }
