@@ -41,7 +41,7 @@ def process_stock(s):
         cur_n, qoq_n, yoy_n = extract_metric(profit_res, 'net')
 
         yield_pct = get_dividend_yield(s['stock_id'], latest['close'])
-        per_pbr_stats = get_per_pbr_90d_stats(s["stock_id"], days=90)
+        per_pbr_stats = get_per_pbr_90d_stats(s['stock_id'], days=90)
         ma_stats = get_MABias(df)
 
         safe_ma_stats = {}
@@ -142,8 +142,7 @@ def process_stock(s):
         margin_score = calc_margin_score(cur_g, cur_o, cur_n)
         eps_score = calc_eps_score(eps_res[1], eps_res[2])
         trend_score = calc_trend_score(qoq_g, yoy_g, qoq_n, yoy_n)
-        score = round(margin_score * 0.4 + eps_score *
-                      0.3 + trend_score * 0.3, 2)
+        score = round(margin_score * 0.4 + eps_score * 0.3 + trend_score * 0.3, 2)
 
         return {
             'name': s['name'],
@@ -152,40 +151,49 @@ def process_stock(s):
             'chg': float(round(chg, 2)),
             'chgPct': float(chgPct),
             'amp': float(amp),
+
             'gross_margin': float(cur_g) if cur_g is not None else None,
             'gross_margin_qoq': float(qoq_g) if qoq_g is not None else None,
             'gross_margin_yoy_diff': float(yoy_g) if yoy_g is not None else None,
+
             'operating_margin': float(cur_o) if cur_o is not None else None,
             'operating_margin_qoq': float(qoq_o) if qoq_o is not None else None,
             'operating_margin_yoy_diff': float(yoy_o) if yoy_o is not None else None,
+
             'net_margin': float(cur_n) if cur_n is not None else None,
             'net_margin_qoq': float(qoq_n) if qoq_n is not None else None,
             'net_margin_yoy_diff': float(yoy_n) if yoy_n is not None else None,
+
             'eps_Y': float(eps_res[0]) if eps_res[0] is not None else None,
             'eps_ttm': float(eps_res[1]) if eps_res[1] is not None else None,
             'eps_est': float(eps_res[2]) if eps_res[2] is not None else None,
+
             'yield': yield_pct,
+
             'per_Y': float(eps_res[3]) if eps_res[3] is not None else None,
-            'per_ttm': float(eps_res[4]) if eps_res[4] is not None else None,
-            'per_est': float(eps_res[5]) if eps_res[5] is not None else None,
-            "per_latest": per_pbr_stats.get("per"),
-            "per_90d_high": per_pbr_stats.get("per_90d_high"),
-            "per_90d_low": per_pbr_stats.get("per_90d_low"),
-            "pbr_latest": per_pbr_stats.get("pbr"),
-            "pbr_90d_high": per_pbr_stats.get("pbr_90d_high"),
-            "pbr_90d_low": per_pbr_stats.get("pbr_90d_low"),
+            'per_latest': per_pbr_stats.get('per'),
+            'per_90d_high': per_pbr_stats.get('per_90d_high'),
+            'per_90d_low': per_pbr_stats.get('per_90d_low'),
+
+            'pbr_latest': per_pbr_stats.get('pbr'),
+            'pbr_90d_high': per_pbr_stats.get('pbr_90d_high'),
+            'pbr_90d_low': per_pbr_stats.get('pbr_90d_low'),
+
             'k': float(round(k, 1)),
             'd': float(round(d, 1)),
             'ma18': float(round(ma18, 2)) if ma18 is not None else None,
             'ma18_break': bool(ma18_break),
             'kd_buy': bool(kd_buy),
             'bb_pct': float(bb_pct) if bb_pct is not None else None,
+
             'volume': int(round(volume, 0)) if pd.notna(volume) else None,
             'prev_volume': int(round(prev_volume, 0)) if pd.notna(prev_volume) else None,
             'volume_ratio': float(volume_ratio) if volume_ratio is not None else None,
             'volume_add': int(round(volume_add, 0)) if volume_add is not None else None,
             'volume_ok': bool(volume_ok),
+
             **safe_ma_stats,
+
             'sig': int(sig),
             'signal_result': signal_result,
             'score': float(score),
