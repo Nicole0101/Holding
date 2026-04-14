@@ -428,11 +428,11 @@
         </div>`;
     }
 
-    function renderRangeMetric(current, low, high) {
+    function renderRangeMetric(current, low, high, suffix = "") {
       return `
         <div class="metric metric-2line">
-          <div class="metric-main">${fmt(current)}</div>
-          <small class="metric-note">${fmt(low)} <br> ${fmt(high)}</small>
+          <div class="metric-main">${fmt(current, suffix)}</div>
+          <small class="metric-note">${fmt(low, suffix)} <br> ${fmt(high, suffix)}</small>
         </div>`;
     }
 
@@ -476,23 +476,9 @@
           <td>${fmt(s.k)}/${fmt(s.d)}</td>
           <td class="col-md">${fmt(s.bb_pct, "%")}</td>
 
-          <td class="col-lg ${distClass(s.bias6)}">
-            <div>${fmt(s.bias6, "%")}</div>
-            <br><small class="text-green">${fmt(s.bias6_min, "%")}</small>
-            <br><small class="text-red">${fmt(s.bias6_max, "%")}</small>
-          </td>
-
-          <td class="col-lg ${distClass(s.bias18)}">
-            <div>${fmt(s.bias18, "%")}</div>
-            <br><small class="text-green">${fmt(s.bias18_min, "%")}</small>            
-            <br><small class="text-red">${fmt(s.bias18_max, "%")}</small>
-          </td>
-
-          <td class="col-lg ${distClass(s.bias50)}">
-            <div>${fmt(s.bias50, "%")}</div>
-            <br><small class="text-green">${fmt(s.bias50_min, "%")}</small>
-            <br><small class="text-red">${fmt(s.bias50_max, "%")}</small>
-          </td>
+          <td class="col-lg ${distClass(s.bias6)}">${renderRangeMetric(s.bias6, s.bias6_min, s.bias6_max, "%")}</td>
+          <td class="col-lg ${distClass(s.bias18)}">${renderRangeMetric(s.bias18, s.bias18_min, s.bias18_max, "%")}</td>
+          <td class="col-lg ${distClass(s.bias50)}">${renderRangeMetric(s.bias50, s.bias50_min, s.bias50_max, "%")}</td>
 
           <td class="col-md">
             ${fmt(s.ma18)}<br>
