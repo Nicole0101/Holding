@@ -102,23 +102,23 @@
       background-clip: padding-box;
     }
 
-  .table-lv1 {
-    font-size: clamp(11px, 1vw, 13px);
-    line-height: 1.25;
-  }
-  
-  .table-lv2 {
-    font-size: clamp(10px, 0.9vw, 11px);
-    line-height: 1.2;
-  }
-  
-  .table-lv3 {
-    font-size: clamp(9px, 0.85vw, 10px);
-    line-height: 1.2;
-    color: #8b949e;
-  }
+    .table-lv1 {
+      font-size: clamp(11px, 1vw, 13px);
+      line-height: 1.25;
+    }
 
-    
+    .table-lv2 {
+      font-size: clamp(10px, 0.9vw, 11px);
+      line-height: 1.2;
+    }
+
+    .table-lv3 {
+      font-size: clamp(9px, 0.85vw, 10px);
+      line-height: 1.2;
+      color: #8b949e;
+    }
+
+
     .up {
       color: #f85149;
     }
@@ -417,26 +417,19 @@
       return isNil(v) ? "-" : `${v}${suffix}`;
     }
 
-    function getYieldValue(s) {
-      const raw = s?.yield;
-      if (raw && typeof raw === "object") {
-        const y = raw.yield;
-        return isNil(y) ? null : y;
-      }
-      return isNil(raw) ? null : raw;
-    }
+
 
     function renderMetric(value, qoq, yoy) {
       const arrow = (v) => {
         if (isNil(v)) return "";
         return v > 0 ? "↑" : v < 0 ? "↓" : "";
       };
-    
+
       const colorClass = (v) => {
         if (isNil(v)) return "";
         return v > 0 ? "text-red" : v < 0 ? "text-green" : "";
       };
-    
+
       return `
         <div class="metric">
           <div class="table-lv1">${fmt(value)}</div>
@@ -446,7 +439,7 @@
           </div>
         </div>`;
     }
-    
+
     function renderRangeMetric(current, low, high, suffix = "") {
       return `
         <div class="metric metric-2line">
@@ -455,19 +448,19 @@
           <div class="table-lv3">${fmt(high, suffix)}</div>
         </div>`;
 
-    function distClass(val) {
-      if (isNil(val) || val === "") return "";
-      return Number(val) > 0 ? "up" : "dn";
-    }
+      function distClass(val) {
+        if (isNil(val) || val === "") return "";
+        return Number(val) > 0 ? "up" : "dn";
+      }
 
-    function renderRow(s) {
-  const chgPct = Number(s.chgPct ?? 0);
-  const chgClass = chgPct >= 0 ? "up" : "dn";
-  const chgSign = chgPct >= 0 ? "+" : "";
-  const sigClass = { 1: "up", 0: "watch", "-1": "dn" };
-  const sigLabel = { 1: "買入", 0: "觀望", "-1": "賣出" };
+      function renderRow(s) {
+        const chgPct = Number(s.chgPct ?? 0);
+        const chgClass = chgPct >= 0 ? "up" : "dn";
+        const chgSign = chgPct >= 0 ? "+" : "";
+        const sigClass = { 1: "up", 0: "watch", "-1": "dn" };
+        const sigLabel = { 1: "買入", 0: "觀望", "-1": "賣出" };
 
-  return `
+        return `
     <tr>
       <td>
         <div class="table-lv1">${s.code ?? ""}</div>
@@ -551,18 +544,18 @@
         </div>
       </td>
     </tr>`;
-}
-    
+      }
 
-    function renderMobileCard(s) {
-      const chgPct = Number(s.chgPct ?? 0);
-      const chgClass = chgPct >= 0 ? "up" : "dn";
-      const chgSign = chgPct >= 0 ? "+" : "";
-      const sigClass = { 1: "up", 0: "watch", "-1": "dn" };
-      const sigLabel = { 1: "買入", 0: "觀望", "-1": "賣出" };
-      const yieldValue = getYieldValue(s);
 
-      return `
+      function renderMobileCard(s) {
+        const chgPct = Number(s.chgPct ?? 0);
+        const chgClass = chgPct >= 0 ? "up" : "dn";
+        const chgSign = chgPct >= 0 ? "+" : "";
+        const sigClass = { 1: "up", 0: "watch", "-1": "dn" };
+        const sigLabel = { 1: "買入", 0: "觀望", "-1": "賣出" };
+        const yieldValue = s.yield_value;
+
+        return `
         <div class="stock-card">
           <div class="stock-head">
             <div>
@@ -637,101 +630,101 @@
             <div class="signal-sub">${s.reason ?? ""}</div>
           </div>
         </div>`;
-    }
-
-    function renderTable(data) {
-      document.getElementById("stockBody").innerHTML = data.map(renderRow).join("");
-    }
-
-    function renderMobileCards(data) {
-      document.getElementById("mobileList").innerHTML = data.map(renderMobileCard).join("");
-    }
-
-    function getSortValue(s, key) {
-      switch (key) {
-        case "name":
-          return s.name ?? "";
-        case "code":
-          return s.code ?? "";
-        case "sig":
-          return Number(s.sig ?? -999999);
-        case "yield_value":
-           return Number(s.yield_value ?? -999999);
-        case "score":
-        case "per_latest":
-        case "pbr_latest":
-          return Number(s[key] ?? -999999);
-        default: {
-          const value = s[key];
-          if (isNil(value) || value === "") return -999999;
-          const num = Number(value);
-          return Number.isNaN(num) ? String(value) : num;
-        }
-      }
-    }
-
-    function sortStocks(key) {
-      if (currentSortKey === key) {
-        currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
-      } else {
-        currentSortKey = key;
-        currentSortDirection = "asc";
       }
 
-      sortedStocks.sort((a, b) => {
-        const aVal = getSortValue(a, key);
-        const bVal = getSortValue(b, key);
-        const bothNumbers = typeof aVal === "number" && typeof bVal === "number";
+      function renderTable(data) {
+        document.getElementById("stockBody").innerHTML = data.map(renderRow).join("");
+      }
 
-        if (bothNumbers) {
-          return currentSortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      function renderMobileCards(data) {
+        document.getElementById("mobileList").innerHTML = data.map(renderMobileCard).join("");
+      }
+
+      function getSortValue(s, key) {
+        switch (key) {
+          case "name":
+            return s.name ?? "";
+          case "code":
+            return s.code ?? "";
+          case "sig":
+            return Number(s.sig ?? -999999);
+          case "yield_value":
+            return Number(s.yield_value ?? -999999);
+          case "score":
+          case "per_latest":
+          case "pbr_latest":
+            return Number(s[key] ?? -999999);
+          default: {
+            const value = s[key];
+            if (isNil(value) || value === "") return -999999;
+            const num = Number(value);
+            return Number.isNaN(num) ? String(value) : num;
+          }
+        }
+      }
+
+      function sortStocks(key) {
+        if (currentSortKey === key) {
+          currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+        } else {
+          currentSortKey = key;
+          currentSortDirection = "asc";
         }
 
-        const result = String(aVal).localeCompare(String(bVal), "zh-Hant");
-        return currentSortDirection === "asc" ? result : -result;
-      });
+        sortedStocks.sort((a, b) => {
+          const aVal = getSortValue(a, key);
+          const bVal = getSortValue(b, key);
+          const bothNumbers = typeof aVal === "number" && typeof bVal === "number";
+
+          if (bothNumbers) {
+            return currentSortDirection === "asc" ? aVal - bVal : bVal - aVal;
+          }
+
+          const result = String(aVal).localeCompare(String(bVal), "zh-Hant");
+          return currentSortDirection === "asc" ? result : -result;
+        });
+
+        renderTable(sortedStocks);
+        renderMobileCards(sortedStocks);
+        updateSortIndicators();
+      }
+
+      function updateSortIndicators() {
+        document.querySelectorAll("thead th").forEach((th) => {
+          const key = th.dataset.key;
+          if (!key) return;
+
+          if (!th.dataset.label) {
+            th.dataset.label = th.innerHTML.replace(/\s*[▲▼]$/, "");
+          }
+
+          th.innerHTML = key === currentSortKey
+            ? `${th.dataset.label} ${currentSortDirection === "asc" ? "▲" : "▼"}`
+            : th.dataset.label;
+        });
+      }
+
+      function bindSorting() {
+        document.querySelectorAll("thead th[data-key]").forEach((th) => {
+          th.addEventListener("click", () => {
+            sortStocks(th.dataset.key);
+          });
+        });
+      }
+
+      const buy = sortedStocks.filter(s => s.strategy === "買入").length;
+      const sell = sortedStocks.filter(s => (s.strategy ?? "").includes("出貨")).length;
+      const watch = sortedStocks.filter(s => s.strategy === "觀察").length;
+      const hold = sortedStocks.filter(s => s.strategy === "整理").length;
 
       renderTable(sortedStocks);
       renderMobileCards(sortedStocks);
-      updateSortIndicators();
-    }
+      bindSorting();
 
-    function updateSortIndicators() {
-      document.querySelectorAll("thead th").forEach((th) => {
-        const key = th.dataset.key;
-        if (!key) return;
-
-        if (!th.dataset.label) {
-          th.dataset.label = th.innerHTML.replace(/\s*[▲▼]$/, "");
-        }
-
-        th.innerHTML = key === currentSortKey
-          ? `${th.dataset.label} ${currentSortDirection === "asc" ? "▲" : "▼"}`
-          : th.dataset.label;
-      });
-    }
-
-    function bindSorting() {
-      document.querySelectorAll("thead th[data-key]").forEach((th) => {
-        th.addEventListener("click", () => {
-          sortStocks(th.dataset.key);
-        });
-      });
-    }
-
-    const buy = sortedStocks.filter(s => s.strategy === "買入").length;
-    const sell = sortedStocks.filter(s => (s.strategy ?? "").includes("出貨")).length;
-    const watch = sortedStocks.filter(s => s.strategy === "觀察").length;
-    const hold = sortedStocks.filter(s => s.strategy === "整理").length;
-
-    renderTable(sortedStocks);
-    renderMobileCards(sortedStocks);
-    bindSorting();
-
-    document.getElementById("buyCount").innerText = buy;
-    document.getElementById("sellCount").innerText = sell;
-    document.getElementById("watchCount").innerText = watch;
-    document.getElementById("holdCount").innerText = hold;
+      document.getElementById("buyCount").innerText = buy;
+      document.getElementById("sellCount").innerText = sell;
+      document.getElementById("watchCount").innerText = watch;
+      document.getElementById("holdCount").innerText = hold;
   </script>
 </body>
 
