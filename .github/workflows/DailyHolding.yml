@@ -2,7 +2,7 @@ name: DailyHolding
 
 on:
   schedule:
-    - cron: "30 7 * * 1-5"  # 🇹🇼 17:30（UTC+8）
+    - cron: "20 5 * * 1-5"  # 🇹🇼 15:20（UTC+8）
   workflow_dispatch:
 
 env:
