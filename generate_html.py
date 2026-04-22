@@ -74,7 +74,7 @@ def build_strings(data):
 def main():
     try:
         report_type = config.REPORT_TYPE
-        csv_file = config.CSV_FILE
+        csv_file = config.CSV_FILE.strip()
         report_title = config.REPORT_TITLE
         output_file = config.OUTPUT_FILE
         static_csv_file = get_static_csv_path()
