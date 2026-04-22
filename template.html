@@ -378,7 +378,7 @@
               <th data-key="chg">漲跌</th>
               <th data-key="chgPct">漲跌%</th>
               <th class="col-md" data-key="amp">震幅%</th>
-              <th class="col-lg" data-key="eps_Y">EPS去年<br><small>預估TTM</small></th>
+              <th class="col-lg" data-key="eps_Y">EPS<br><small>去年/預估</small></th>
               <th class="col-lg" data-key="rev">營收(bn)<br><small>M / Q / Y</small></th>
               <th class="col-lg" data-key="gross_margin">毛利率%<br><small>QoQ / YoY</small></th>
               <th class="col-lg" data-key="operating_margin">營益率%<br><small>QoQ / YoY</small></th>
@@ -425,8 +425,8 @@
       const formatted = isInteger
         ? num.toLocaleString("en-US")               // 1,234
         : num.toLocaleString("en-US", {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
         });                                       // 1,234.5
       return formatted + suffix;
     }

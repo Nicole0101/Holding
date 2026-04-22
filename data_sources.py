@@ -27,9 +27,14 @@ def get_stock_data(stock_id):
         res = requests.get(API_URL, params=params, timeout=30)
         data = res.json()
 
+        if res.status_code == 402:
+            raise RuntimeError(
+                f"FinMind quota exceeded for {stock_id}: {data.get('msg')}")
+
         if 'data' not in data or len(data['data']) == 0:
+            print(
+                f"⚠️ get_stock_data empty {stock_id}: status={res.status_code}, msg={data.get('msg')}")
             return pd.DataFrame()
-        
 
         df = pd.DataFrame(data['data'])
 
@@ -55,12 +60,14 @@ def get_stock_data(stock_id):
 
         df = df.dropna(subset=['open', 'close', 'max',
                        'min']).sort_values('date')
-        return df
 
+        return df
+    except RuntimeError:
+        raise
     except Exception as e:
         print(f'❌ get_stock_data error {stock_id}: {e}')
         return pd.DataFrame()
-    
+
 
 def get_revenue_raw(stock_id):
     try:
@@ -154,7 +161,8 @@ def get_per_pbr_90d_stats(stock_id, days=90):
     }
     """
     try:
-        start_date = (datetime.now() - timedelta(days=days * 2)).strftime("%Y-%m-%d")
+        start_date = (datetime.now() - timedelta(days=days * 2)
+                      ).strftime("%Y-%m-%d")
         # 抓寬一點，避免遇到非交易日不夠 90 筆
 
         params = {
@@ -192,7 +200,8 @@ def get_per_pbr_90d_stats(stock_id, days=90):
 
         # 用候選欄位名提高相容性
         per_col = next(
-            (c for c in ["price_to_earning_ratio", "PER", "per"] if c in df.columns),
+            (c for c in ["price_to_earning_ratio",
+             "PER", "per"] if c in df.columns),
             None
         )
         pbr_col = next(
