@@ -3,7 +3,7 @@ name: 持股Rpt
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 22 * * 1-5"   # 台灣時間平日 06:30
+    - cron: "0 8 * * 1-5"    ## 台灣時間 週一至週五 16:00 (UTC 07:00)
 
 permissions:
   contents: write
