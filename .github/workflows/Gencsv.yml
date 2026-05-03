@@ -1,4 +1,4 @@
-name: Gen Holding CSV
+name: Gen stocks csv
 
 on:
   workflow_dispatch:
